@@ -71,15 +71,14 @@ class CartPoleDQN:
 
     def test_model(self):
         self.train_model_babymode(num_epochs=100)
-
+        self.plot_ep_rewards()
+        self.env.close()
     
 def test_cartpole_learning():
     env=gym.make("CartPole-v1")#, render_mode="human") 
     dqn = CartPoleDQN(env=env)
 
     dqn.test_model()    
-    dqn.plot_ep_rewards()
-    dqn.env.close()
 
 if __name__ == "__main__":
     test_cartpole_learning()

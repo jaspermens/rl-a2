@@ -6,6 +6,7 @@ import torch
 from torch import nn
 
 from data_handling import Experience, ReplayBuffer
+from dqn import DeepQModel
 
 class DeepQAgent:
     def __init__(self, env: gym.Env, 
@@ -18,13 +19,14 @@ class DeepQAgent:
 
         self.policy = policy
         self.exploration_parameter = exploration_parameter
+        self.burnin_length = buffer_capacity
 
         self.buffer = ReplayBuffer(capacity=buffer_capacity)
         
     def reset(self):
         self.state, _ = self.env.reset()
 
-    def select_action(self, model: nn.Module):
+    def select_action(self, model: DeepQModel):
         # basically self.model.evaluate(state)
         state = torch.tensor(np.array([self.state]))
 
@@ -37,15 +39,14 @@ class DeepQAgent:
         return action
 
     @torch.no_grad      # disable gradient calculation here. I think it saves memory
-    def take_step(self, model: nn.Module):
+    def take_step(self, model: DeepQModel):
         action = self.select_action(model = model)
 
         new_state, reward, done, _, _ = self.env.step(action)
         
         #
         # this is where we'd do replay buffer stuff
-        memory = Experience(self.state, action, reward, done, new_state)
-        self.buffer.append(memory)
+        self.buffer.append(state=self.state, action=action, reward=reward, new_state=new_state, done=done)
         #
         
         self.state = new_state           
@@ -55,3 +56,6 @@ class DeepQAgent:
 
         return reward, done
     
+    def burn_in(self, model: DeepQModel):
+        for _ in range(self.burnin_length):
+            self.take_step(model=model)

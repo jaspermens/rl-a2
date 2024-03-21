@@ -44,7 +44,7 @@ class CartPoleDQN:
         self.ep_rewards = []
         self.episode_losses = []
         self.epoch_epsilons = []
-
+        self.burnin_time = burnin_time
         self.epsilon_0 = exp_param
         self.anneal_timescale = anneal_timescale
 

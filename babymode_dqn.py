@@ -12,15 +12,15 @@ from tqdm import tqdm
 
 class CartPoleDQN:
     def __init__(self, 
-                 env = gym.Env,
-                 lr: float = 1e-3,  
-                 exp_param: float = 0.5,
-                 policy: Policy = Policy.EGREEDY,
-                 batch_size: int = 128,
-                 gamma: float = 0.9,
-                 target_network_update_time: int = 200,
-                 anneal_timescale: int = 1000,
-                 burnin_time: int = 1000,
+                 env: gym.Env,
+                 lr: float,  
+                 exp_param: float,
+                 policy: Policy,
+                 batch_size: int,
+                 gamma: float,
+                 target_network_update_time: int,
+                 anneal_timescale: int,
+                 burnin_time: int,
                  ):
         
         self.lr = lr
@@ -181,7 +181,7 @@ class CartPoleDQN:
             
         self.agent.burn_in(model=self.model)     
         n_steps = 0   
-        self.anneal_timescale = num_epochs*1000
+        # self.anneal_timescale = num_epochs*1000
         for epoch_i in tqdm(range(num_epochs), total=num_epochs, desc=self.episode_reward):
             done = False
             while not done:
@@ -223,28 +223,3 @@ class CartPoleDQN:
         self.train_model_with_buffer_and_target_network(num_epochs=500)
         self.plot_ep_rewards()
         self.env.close()
-    
-
-def test_cartpole_learning():
-    num_repetitions = 10
-    num_epochs = 500
-
-    epsilons = np.zeros([num_repetitions, num_epochs])
-    rewards = np.zeros([num_repetitions, num_epochs])
-    for i in range(num_repetitions):
-        env=gym.make("CartPole-v1")#, render_mode="human") 
-        dqn = CartPoleDQN(env=env)
-        dqn.train_model_with_buffer_and_target_network(num_epochs=num_epochs)    
-
-        epsilons[i] = dqn.epoch_epsilons
-        rewards[i] = dqn.ep_rewards
-
-    fig, ax = plt.subplots(1,1)
-    ax.plot(np.median(rewards, axis=0), c='black')
-    ax.fill_between(np.arange(num_epochs), *np.quantile(rewards, q=[.33, .67], axis=0), interpolate=True, alpha=.5, zorder=0, color='teal')
-    ax.fill_between(np.arange(num_epochs), np.min(rewards, axis=0), np.max(rewards, axis=0), interpolate=True, alpha=.3, zorder=-1, color='teal')
-    plt.show()
-
-
-if __name__ == "__main__":
-    test_cartpole_learning()

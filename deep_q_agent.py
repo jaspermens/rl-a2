@@ -10,9 +10,9 @@ from dqn import DeepQModel
 
 class DeepQAgent:
     def __init__(self, env: gym.Env, 
-                 policy: Policy = Policy.EGREEDY, 
-                 exploration_parameter: float = 0.1,
-                 buffer_capacity: int = 100,
+                 policy: Policy, 
+                 exploration_parameter: float,
+                 buffer_capacity: int,
                  ):
         self.env = env
         self.reset()
@@ -50,12 +50,19 @@ class DeepQAgent:
         #
         
         self.state = new_state           
-
+        
         if done:
             self.reset()
 
         return reward, done
     
     def burn_in(self, model: DeepQModel):
+        real_policy = self.policy
+
+        # set the policy to fully random for this bit
+        # the initial model might have a bias
+        self.policy = Policy.RANDOM
         for _ in range(self.burnin_length):
             self.take_step(model=model)
+        
+        self.policy = real_policy

@@ -19,9 +19,14 @@ def act_egreedy(q_values: torch.Tensor, epsilon: float = None) -> int:
 
     return action
 
-def act_softmax(state):
-    ...
-
+def act_softmax(q_values: torch.Tensor, temperature: float = None) -> int:
+    if temperature is None:
+        raise ValueError("attempted to use softmax policy without temperature")
+    x = q_values.numpy()[0]/temperature
+    z = x - max(x)
+    softmax = (np.exp(z))/((sum(np.exp(z))))
+    action = np.random.choice([0,1],1,p=softmax)[0]
+    return action
 
 class Policy(Enum):
     GREEDY = act_greedy

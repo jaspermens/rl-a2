@@ -13,11 +13,11 @@ from tqdm import tqdm
 class CartPoleDQN:
     def __init__(self, 
                  env = gym.Env,
-                 lr: float = 1e-2,  
-                 exp_param: float = 0.9,
+                 lr: float = 1e-3,  
+                 exp_param: float = 0.5,
                  policy: Policy = Policy.EGREEDY,
                  batch_size: int = 128,
-                 gamma: float = 0.99,
+                 gamma: float = 0.9,
                  target_network_update_time: int = 200,
                  anneal_timescale: int = 1000,
                  burnin_time: int = 1000,
@@ -135,6 +135,7 @@ class CartPoleDQN:
 
                 self.optimizer.zero_grad() # I think for stability
                 loss.backward()            
+                torch.nn.utils.clip_grad_value_(self.model.parameters(), 100)
                 self.optimizer.step()    
 
             # print(self.episode_reward)
@@ -180,7 +181,7 @@ class CartPoleDQN:
             
         self.agent.burn_in(model=self.model)     
         n_steps = 0   
-        self.anneal_timescale = num_epochs/4
+        self.anneal_timescale = num_epochs*1000
         for epoch_i in tqdm(range(num_epochs), total=num_epochs, desc=self.episode_reward):
             done = False
             while not done:
@@ -189,7 +190,9 @@ class CartPoleDQN:
                 loss, done = train_step()
 
                 self.optimizer.zero_grad() # I think for stability
-                loss.backward()            
+                loss.backward()      
+                torch.nn.utils.clip_grad_value_(self.model.parameters(), 100)
+
                 self.optimizer.step()    
                 n_steps += 1
 
@@ -217,16 +220,31 @@ class CartPoleDQN:
     def test_model(self):
         # self.train_model_babymode(num_epochs=100)
         # self.train_model_with_buffer(num_epochs=500)
-        self.train_model_with_buffer_and_target_network(num_epochs=1000)
+        self.train_model_with_buffer_and_target_network(num_epochs=500)
         self.plot_ep_rewards()
         self.env.close()
     
 
 def test_cartpole_learning():
-    env=gym.make("CartPole-v1")#, render_mode="human") 
-    dqn = CartPoleDQN(env=env)
+    num_repetitions = 10
+    num_epochs = 500
 
-    dqn.test_model()    
+    epsilons = np.zeros([num_repetitions, num_epochs])
+    rewards = np.zeros([num_repetitions, num_epochs])
+    for i in range(num_repetitions):
+        env=gym.make("CartPole-v1")#, render_mode="human") 
+        dqn = CartPoleDQN(env=env)
+        dqn.train_model_with_buffer_and_target_network(num_epochs=num_epochs)    
+
+        epsilons[i] = dqn.epoch_epsilons
+        rewards[i] = dqn.ep_rewards
+
+    fig, ax = plt.subplots(1,1)
+    ax.plot(np.median(rewards, axis=0), c='black')
+    ax.fill_between(np.arange(num_epochs), *np.quantile(rewards, q=[.33, .67], axis=0), interpolate=True, alpha=.5, zorder=0, color='teal')
+    ax.fill_between(np.arange(num_epochs), np.min(rewards, axis=0), np.max(rewards, axis=0), interpolate=True, alpha=.3, zorder=-1, color='teal')
+    plt.show()
+
 
 if __name__ == "__main__":
     test_cartpole_learning()

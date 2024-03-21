@@ -9,7 +9,7 @@ class DeepQModel(nn.Module):
         self.n_inputs = n_inputs
         self.n_actions = n_actions
 
-        n_nodes = 256
+        n_nodes = 128
         self.layer1 = nn.Linear(n_inputs, n_nodes)
         self.layer2 = nn.Linear(n_nodes, n_nodes)
         self.layer3 = nn.Linear(n_nodes, n_actions)

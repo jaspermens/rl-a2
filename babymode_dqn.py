@@ -13,13 +13,14 @@ from tqdm import tqdm
 class CartPoleDQN:
     def __init__(self, 
                  env = gym.Env,
-                 lr: float = 1e-4,  
+                 lr: float = 1e-2,  
                  exp_param: float = 0.9,
                  policy: Policy = Policy.EGREEDY,
                  batch_size: int = 128,
                  gamma: float = 0.99,
                  target_network_update_time: int = 200,
                  anneal_timescale: int = 1000,
+                 burnin_time: int = 1000,
                  ):
         
         self.lr = lr
@@ -31,11 +32,11 @@ class CartPoleDQN:
         self.agent = DeepQAgent(env=env, 
                                 policy=policy, 
                                 exploration_parameter=exp_param, 
-                                buffer_capacity=self.batch_size*5)
+                                buffer_capacity=burnin_time)
         
         self.model = DeepQModel(n_inputs=4, n_actions=2)
         self.target_network = DeepQModel(n_inputs=4, n_actions=2)
-        self.update_target_model
+        self.update_target_model()
 
         self.optimizer = Adam(self.model.parameters(), lr=lr)
         
@@ -52,6 +53,8 @@ class CartPoleDQN:
 
     def update_epsilon(self, time):
         self.epsilon = self.get_epsilon(time=time)
+        self.agent.exploration_parameter = self.epsilon
+
 
     def update_target_model(self):
         self.target_network.load_state_dict(self.model.state_dict())
@@ -177,11 +180,11 @@ class CartPoleDQN:
             
         self.agent.burn_in(model=self.model)     
         n_steps = 0   
-        self.anneal_timescale = num_epochs/2
-        for _ in tqdm(range(num_epochs), total=num_epochs, desc=self.episode_reward):
+        self.anneal_timescale = num_epochs/4
+        for epoch_i in tqdm(range(num_epochs), total=num_epochs, desc=self.episode_reward):
             done = False
             while not done:
-                self.update_epsilon(time=n_steps)
+                self.update_epsilon(time=epoch_i)
 
                 loss, done = train_step()
 

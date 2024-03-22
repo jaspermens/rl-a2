@@ -45,12 +45,17 @@ def plot_cartpole_learning(num_repetitions: int, num_epochs: int, model_params):
     # plot losses over time (?)
     # ax1 = ax.twinx()
     # ax1.plot(np.mean(losses, axis=0), c='red', ls='dotted')
+    ax1 = ax.twinx()
+    ax1.plot(epsilons[0],label="Exploration parameter")
 
     # aesthetics
     ax.set_title(f"Results of {str(model_params['policy'])[14:-23]} policy for {num_repetitions} repetitions of {num_epochs} epochs", fontsize=20)
     ax.set_ylabel("Reward attained", fontsize=16)
     ax.set_xlabel("Epoch", fontsize=16)
-    ax.legend(loc="lower right")
+
+    lines, labels = ax.get_legend_handles_labels()
+    lines2, labels2 = ax1.get_legend_handles_labels()
+    ax.legend(lines + lines2, labels + labels2, loc="lower right")
     ax.grid(alpha=0.5)
 
     target_string, anneal = "target", "anneal"

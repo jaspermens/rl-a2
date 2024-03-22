@@ -72,19 +72,19 @@ if __name__ == "__main__":
             'lr': 5e-4,  
             'exp_param': 1.,
             'policy': Policy.EGREEDY,
-            'batch_size': 128,
+            'batch_size': 256,
             'gamma': 0.99,
             'target_network_update_time': 50,
             'do_target_network': True,
             'do_experience_replay': True,
             'anneal_timescale': 500,
-            'burnin_time': 1000,
+            'burnin_time': 10000,
             'eval_interval': 10,
             'n_eval_episodes': 10,
     }
 
-    num_repetitions = 3
-    num_epochs = 100
+    num_repetitions = 5
+    num_epochs = 500
     plot_cartpole_learning(num_epochs=num_epochs, 
                            num_repetitions=num_repetitions,
                             model_params=model_params)

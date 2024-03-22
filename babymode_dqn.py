@@ -23,11 +23,16 @@ class CartPoleDQN:
                  do_experience_replay: bool,
                  anneal_timescale: int,
                  burnin_time: int,
+                 eval_interval: int,
+                 n_eval_episodes: int,
                  ):
         
         self.lr = lr
         self.gamma = gamma
         self.batch_size = batch_size
+
+        self.eval_interval = eval_interval
+        self.n_eval_episodes = n_eval_episodes
 
         self.target_network_update_time = target_network_update_time
         self.do_target_network = do_target_network
@@ -49,6 +54,9 @@ class CartPoleDQN:
                                 buffer_capacity=burnin_time)
         
         self.model = DeepQModel(n_inputs=4, n_actions=2)
+
+        self.env = env
+
         if self.do_target_network:
             self.target_network = DeepQModel(n_inputs=4, n_actions=2)
         else:
@@ -63,6 +71,8 @@ class CartPoleDQN:
         self.ep_rewards = []
         self.episode_losses = []
         self.epoch_epsilons = []
+        self.eval_rewards = []
+        self.eval_epsilons = []
 
     def update_exp_param(self, time):
         new_exp_param = self.init_exp_param * 0.5**(time / self.anneal_timescale)
@@ -160,10 +170,46 @@ class CartPoleDQN:
                 self.update_exp_param(time=epoch_i)
                 self.update_target_model()      # (only updates the model if applicable)
 
+            if epoch_i % self.eval_interval == 0:
+                mean_reward = self.evaluate_model()
+                self.eval_rewards.append(mean_reward)
+                self.eval_epsilons.append(self.exp_param)
+
             self.episode_losses.append(loss.item())
             self.epoch_epsilons.append(self.exp_param)
             self.ep_rewards.append(self.episode_reward)
             self.episode_reward = 0
+
+
+    def evaluate_model(self):
+        """ evaluates the model across a few epochs/episodes """  
+        rewards = np.zeros((self.n_eval_episodes))
+
+        for i in range(self.n_eval_episodes):
+            state, _ = self.env.reset()
+            done = False
+            ep_reward = 0
+            
+            while not done:
+                state = torch.from_numpy(state).unsqueeze(0)
+
+                with torch.no_grad():
+                    q_values = self.model.forward(state)
+
+                action = Policy.GREEDY(q_values)
+
+                state, reward, terminated, truncated, _ = self.env.step(action=action)
+
+                ep_reward += reward
+
+                done = terminated or truncated
+
+            rewards[i] = ep_reward
+
+        mean_reward = np.mean(rewards)
+        self.env.reset()
+        
+        return mean_reward
 
     def plot_ep_rewards(self):
         fig, ax = plt.subplots(1,1)

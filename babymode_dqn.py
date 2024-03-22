@@ -223,27 +223,30 @@ class CartPoleDQN:
 
         plt.show()
 
-    def dqn_render_run(self, env):
+    def dqn_render_run(self, env, n_episodes_to_plot=10):
         """Runs a single evaluation episode while rendering the environment for visualization."""
-        state, _ = env.reset()  # Uses the newly created environment with render=human
-        done = False
-        ep_reward = 0
-        
-        while not done:
-            state = torch.from_numpy(state).unsqueeze(0)
 
-            with torch.no_grad():
-                q_values = self.model.forward(state)
+        env.reset(seed=4309)
+        for i in range(n_episodes_to_plot):
+            state, _ = env.reset()  # Uses the newly created environment with render=human
+            done = False
+            ep_reward = 0
+            
+            while not done:
+                state = torch.from_numpy(state).unsqueeze(0)
 
-            action = Policy.GREEDY(q_values)
+                with torch.no_grad():
+                    q_values = self.model.forward(state)
 
-            state, reward, terminated, truncated, _ = env.step(action=action)
+                action = Policy.GREEDY(q_values)
 
-            ep_reward += reward
+                state, reward, terminated, truncated, _ = env.step(action=action)
 
-            done = terminated or truncated
+                ep_reward += reward
 
-        self.env.reset()
+                done = terminated or truncated
+
+            self.env.reset()
         
         return ep_reward
 

@@ -18,6 +18,7 @@ def plot_cartpole_learning(num_repetitions: int, num_epochs: int, model_params, 
 
     for repetition_i in range(num_repetitions):
         env = gym.make("CartPole-v1")#, render_mode="human") 
+        env.reset(seed=np.random.randint(0,999999999))
 
         dqn = CartPoleDQN(env=env,
                           **model_params)
@@ -66,23 +67,24 @@ def plot_cartpole_learning(num_repetitions: int, num_epochs: int, model_params, 
 
 
 if __name__ == "__main__":
+    num_epochs = 300
     model_params = {
             'lr': 5e-4,  
             'exp_param': 1.,
-            'policy': Policy.EGREEDY,
-            'batch_size': 256,
-            'gamma': 0.99,
-            'target_network_update_time': 50,
+            'policy': Policy.SOFTMAX,
+            'batch_size': 128,
+            'gamma': 0.9,
+            'target_network_update_time': 200,
             'do_target_network': True,
             'do_experience_replay': True,
-            'anneal_timescale': 150,
-            'burnin_time': 10000,
+            'anneal_timescale': num_epochs*1e10,
+            'burnin_time': 10000,   # == buffer_capacity
             'eval_interval': 10,
             'n_eval_episodes': 10,
     }
 
     num_repetitions = 3
-    num_epochs = 500
+    
     plot_cartpole_learning(num_epochs=num_epochs, 
-                           num_repetitions=num_repetitions,
+                           num_repetitions=num_repetitions, 
                             model_params=model_params)

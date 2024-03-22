@@ -71,23 +71,24 @@ def plot_cartpole_learning(num_repetitions: int, num_epochs: int, model_params, 
 
 
 if __name__ == "__main__":
+    num_epochs = 50
     model_params = {
             'lr': 5e-4,  
-            'exp_param': 1.,
+            'exp_param': 0.3,
             'policy': Policy.EGREEDY,
             'batch_size': 256,
             'gamma': 0.99,
             'target_network_update_time': 50,
             'do_target_network': True,
             'do_experience_replay': True,
-            'anneal_timescale': 150,
+            'anneal_timescale': num_epochs/2,
             'burnin_time': 10000,
             'eval_interval': 10,
             'n_eval_episodes': 10,
     }
 
     num_repetitions = 3
-    num_epochs = 500
+    
     plot_cartpole_learning(num_epochs=num_epochs, 
                            num_repetitions=num_repetitions,
                             model_params=model_params)

@@ -44,6 +44,8 @@ class DeepQAgent:
 
         new_state, reward, done, _, _ = self.env.step(action)
         
+        if done:
+            new_state = None
         #
         # this is where we'd do replay buffer stuff
         self.buffer.append(state=self.state, action=action, reward=reward, new_state=new_state, done=done)

@@ -49,7 +49,10 @@ class CartPoleDQN:
                                 buffer_capacity=burnin_time)
         
         self.model = DeepQModel(n_inputs=4, n_actions=2)
-        self.target_network = DeepQModel(n_inputs=4, n_actions=2)
+        if self.do_target_network:
+            self.target_network = DeepQModel(n_inputs=4, n_actions=2)
+        else:
+            self.target_network = self.model
         self.update_target_model()
 
         self.optimizer = Adam(self.model.parameters(), lr=lr)
@@ -76,18 +79,29 @@ class CartPoleDQN:
             self.target_network.load_state_dict(self.model.state_dict())
 
     def _train_step_without_buffer(self):
+        """ 
+        train step using only empirical data. 
+        note: not sure if this is correct actually
+        """
         # take step
+        state_before = self.agent.state
+
         reward, done = self.agent.take_step(self.model)
+        self.episode_reward += reward
+
+        new_state = self.agent.state
+        
 
         # compute mse loss:
-        q_values = self.model.forward(self.agent.state)
+        q_values = self.model.forward(state_before) 
         expected_value = q_values.max(1)[0] # get the max q value (note: not the index)
 
-        next_state_value = torch.Tensor(np.array([reward]))
+        # next state value according to the (target) net
+        new_state_q_value = self.target_network.forward(new_state).max(1)[0]
+        new_state_value = self.gamma * new_state_q_value + reward
 
-        loss = nn.MSELoss()(next_state_value, expected_value)
+        loss = nn.MSELoss()(new_state_value, expected_value)
 
-        self.episode_reward += reward
         
         return loss, done
 
@@ -101,24 +115,28 @@ class CartPoleDQN:
         # fucky tensor thing to reshape
         batch = Experience(*zip(*experiences))
 
-        # Compute a mask of non-final states and concatenate the batch elements
-        # (a final state would've been the one after which simulation ended)
-        non_final_mask = torch.tensor(tuple(map(lambda s: s is not None, batch.new_state)), 
+        # if the run is terminated, then the value is 0, so let's mask those out
+        # also, concatenate the batch data (just for nicer casting)
+
+        non_final_mask = torch.tensor([s is not None for s in batch.new_state], 
                                         dtype=torch.bool)
+        
         non_final_next_states = torch.cat([torch.Tensor(s) for s in batch.new_state
                                                     if s is not None])
+        
         state_batch = torch.cat(batch.state)
         action_batch = torch.cat(batch.action).type(dtype=torch.int64).unsqueeze(-1)
         reward_batch = torch.cat(batch.reward)
 
-        # best q-values under current policy in the previous states
+        # q-values for the actions in the batch under current policy
         q_values_batch = self.model.forward(state_batch)
         state_action_values = q_values_batch.gather(1, action_batch)
 
-        q_values = torch.zeros(self.batch_size)
-        q_values[non_final_mask] = self.target_network.forward(non_final_next_states).max(1).values
+        # best q-values for the states in the batch
+        next_state_best_q_values = torch.zeros(self.batch_size)
+        next_state_best_q_values[non_final_mask] = self.target_network.forward(non_final_next_states).max(1).values
         
-        expected_state_action_values = (q_values * self.gamma) + reward_batch
+        expected_state_action_values = reward_batch + (self.gamma * next_state_best_q_values)
 
         loss = nn.MSELoss()(state_action_values, expected_state_action_values.unsqueeze(1))
         
@@ -132,16 +150,17 @@ class CartPoleDQN:
             while not done:
                 loss, done = self.train_step_func()
 
-                self.optimizer.zero_grad() # I think for stability
-                loss.backward()      
+                self.optimizer.zero_grad() # remove gradients from previous steps
+                loss.backward()            # compute gradients
                 torch.nn.utils.clip_grad_value_(self.model.parameters(), 100)
 
-                self.optimizer.step()    
+                self.optimizer.step()      # apply gradients
 
                 self.total_time += 1
                 self.update_exp_param(time=epoch_i)
-                self.update_target_model()
+                self.update_target_model()      # (only updates the model if applicable)
 
+            self.episode_losses.append(loss.item())
             self.epoch_epsilons.append(self.exp_param)
             self.ep_rewards.append(self.episode_reward)
             self.episode_reward = 0

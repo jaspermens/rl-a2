@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from policies import Policy
     
 
-def plot_cartpole_learning(num_repetitions: int, num_epochs: int, model_params):
+def plot_cartpole_learning(num_repetitions: int, num_epochs: int, model_params, render_final_dqn=True):
     losses = np.zeros([num_repetitions, num_epochs])
     epsilons = np.zeros([num_repetitions, num_epochs])
     rewards = np.zeros([num_repetitions, num_epochs])
@@ -65,6 +65,11 @@ def plot_cartpole_learning(num_repetitions: int, num_epochs: int, model_params):
     plt.tight_layout()
     plt.savefig("test_results.png")
     plt.show()
+
+    if render_final_dqn:
+        env = gym.make("CartPole-v1", render_mode="human") 
+
+        dqn.dqn_render_run(env=env)
 
 
 if __name__ == "__main__":

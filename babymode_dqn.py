@@ -109,7 +109,7 @@ class CartPoleDQN:
         new_state_q_value = self.target_network.forward(new_state).max(1)[0]
         new_state_value = self.gamma * new_state_q_value + reward
 
-        loss = nn.MSELoss()(new_state_value, expected_value)
+        loss = nn.MSELoss()(expected_value, new_state_value)
 
         
         return loss, done

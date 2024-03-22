@@ -109,7 +109,7 @@ class CartPoleDQN:
         new_state_q_value = self.target_network.forward(new_state).max(1)[0]
         new_state_value = self.gamma * new_state_q_value + reward
 
-        loss = nn.MSELoss()(new_state_value, expected_value)
+        loss = nn.MSELoss()(expected_value, new_state_value)
 
         
         return loss, done
@@ -222,4 +222,28 @@ class CartPoleDQN:
         plt.savefig('ep_rewards.png')
 
         plt.show()
+
+    def dqn_render_run(self, env):
+        """Runs a single evaluation episode while rendering the environment for visualization."""
+        state, _ = env.reset()  # Uses the newly created environment with render=human
+        done = False
+        ep_reward = 0
+        
+        while not done:
+            state = torch.from_numpy(state).unsqueeze(0)
+
+            with torch.no_grad():
+                q_values = self.model.forward(state)
+
+            action = Policy.GREEDY(q_values)
+
+            state, reward, terminated, truncated, _ = env.step(action=action)
+
+            ep_reward += reward
+
+            done = terminated or truncated
+
+        self.env.reset()
+        
+        return ep_reward
 

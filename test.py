@@ -18,6 +18,7 @@ def plot_cartpole_learning(num_repetitions: int, num_epochs: int, model_params, 
 
     for repetition_i in range(num_repetitions):
         env = gym.make("CartPole-v1")#, render_mode="human") 
+        env.reset(seed=np.random.randint(0,999999999))
 
         dqn = CartPoleDQN(env=env,
                           **model_params)
@@ -38,12 +39,17 @@ def plot_cartpole_learning(num_repetitions: int, num_epochs: int, model_params, 
     
     ax.fill_between(eval_times, *np.quantile(eval_rewards, q=[.33, .67], axis=0), interpolate=True, alpha=.5, zorder=0, color='teal',label="1-$\sigma$? quantile")
     ax.fill_between(eval_times, np.min(eval_rewards, axis=0), np.max(eval_rewards, axis=0), interpolate=True, alpha=.3, zorder=-1, color='teal',label="Total range")
-    
+    ax1 = ax.twinx()
+    ax1.plot(epsilons[0],label="Exploration parameter")
+
     # aesthetics
     ax.set_title(f"Results of {str(model_params['policy'])[14:-23]} policy for {num_repetitions} repetitions of {num_epochs} epochs", fontsize=20)
     ax.set_ylabel("Reward attained", fontsize=16)
     ax.set_xlabel("Epoch", fontsize=16)
-    ax.legend(loc="lower right")
+
+    lines, labels = ax.get_legend_handles_labels()
+    lines2, labels2 = ax1.get_legend_handles_labels()
+    ax.legend(lines + lines2, labels + labels2, loc="lower right")
     ax.grid(alpha=0.5)
 
     target_string, anneal = "target", "anneal"
@@ -66,23 +72,25 @@ def plot_cartpole_learning(num_repetitions: int, num_epochs: int, model_params, 
 
 
 if __name__ == "__main__":
+    num_epochs = 300
     model_params = {
             'lr': 5e-4,  
             'exp_param': 1.,
-            'policy': Policy.EGREEDY,
-            'batch_size': 256,
-            'gamma': 0.99,
-            'target_network_update_time': 50,
+            'policy': Policy.SOFTMAX,
+            'batch_size': 128,
+            'gamma': 0.9,
+            'target_network_update_time': 200,
             'do_target_network': True,
             'do_experience_replay': True,
-            'anneal_timescale': 150,
-            'burnin_time': 10000,
+            'anneal_timescale': num_epochs*1e10,
+            'burnin_time': 10000,   # == buffer_capacity
             'eval_interval': 10,
             'n_eval_episodes': 10,
     }
 
     num_repetitions = 3
-    num_epochs = 500
+    
+    
     plot_cartpole_learning(num_epochs=num_epochs, 
-                           num_repetitions=num_repetitions,
+                           num_repetitions=num_repetitions, 
                             model_params=model_params)

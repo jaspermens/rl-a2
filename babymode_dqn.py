@@ -227,9 +227,8 @@ class CartPoleDQN:
         """Runs a single evaluation episode while rendering the environment for visualization."""
         state, _ = env.reset()  # Uses the newly created environment with render=human
         done = False
-        ep_reward = 0
         
-        while not done:
+        while True:
             state = torch.from_numpy(state).unsqueeze(0)
 
             with torch.no_grad():
@@ -239,11 +238,8 @@ class CartPoleDQN:
 
             state, reward, terminated, truncated, _ = env.step(action=action)
 
-            ep_reward += reward
-
-            done = terminated or truncated
-
-        self.env.reset()
-        
-        return ep_reward
-
+            done = terminated # or truncated
+            
+            if done:
+                state, _ = env.reset()
+            

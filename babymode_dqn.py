@@ -97,7 +97,6 @@ class CartPoleDQN:
         state_before = self.agent.state
 
         reward, done = self.agent.take_step(self.model)
-        self.episode_reward += reward
 
         new_state = self.agent.state
         
@@ -118,7 +117,6 @@ class CartPoleDQN:
     def _train_step_with_buffer(self):
         # take step
         reward, done = self.agent.take_step(self.model)
-        self.episode_reward += reward
 
         # sample from the buffer
         experiences = self.agent.buffer.sample(batch_size=self.batch_size)
@@ -157,6 +155,7 @@ class CartPoleDQN:
 
         for epoch_i in tqdm(range(num_epochs), total=num_epochs, desc=self.episode_reward):
             done = False
+            episode_reward = 0
             while not done:
                 loss, done = self.train_step_func()
 
@@ -167,9 +166,11 @@ class CartPoleDQN:
                 self.optimizer.step()      # apply gradients
 
                 self.total_time += 1
+                episode_reward += 1
                 self.update_exp_param(time=epoch_i)
                 self.update_target_model()      # (only updates the model if applicable)
 
+            # storing data for plotting
             if epoch_i % self.eval_interval == 0:
                 mean_reward = self.evaluate_model()
                 self.eval_rewards.append(mean_reward)
@@ -177,8 +178,7 @@ class CartPoleDQN:
 
             self.episode_losses.append(loss.item())
             self.epoch_epsilons.append(self.exp_param)
-            self.ep_rewards.append(self.episode_reward)
-            self.episode_reward = 0
+            self.ep_rewards.append(episode_reward)
 
 
     def evaluate_model(self):

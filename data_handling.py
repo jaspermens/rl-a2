@@ -14,7 +14,11 @@ class ReplayBuffer:
         self.buffer = deque(maxlen=capacity)
 
     def append(self, state, action, reward, done, new_state) -> None:
-        to_tensor = lambda x: torch.Tensor(np.array([x]))
+        def to_tensor(x):
+            if x is None:
+                return x
+            return torch.Tensor(np.array([x]))
+        
         action = int(action)
         self.buffer.append(Experience(to_tensor(state), 
                                       to_tensor(action),

@@ -19,191 +19,197 @@ class CartPoleDQN:
                  batch_size: int,
                  gamma: float,
                  target_network_update_time: int,
+                 do_target_network: bool,
+                 do_experience_replay: bool,
                  anneal_timescale: int,
                  burnin_time: int,
+                 eval_interval: int,
+                 n_eval_episodes: int,
                  ):
         
         self.lr = lr
         self.gamma = gamma
         self.batch_size = batch_size
-        self.target_network_update_time = target_network_update_time
 
-        self.env = env
+        self.eval_interval = eval_interval
+        self.n_eval_episodes = n_eval_episodes
+
+        self.target_network_update_time = target_network_update_time
+        self.do_target_network = do_target_network
+        
+        self.burnin_time = burnin_time
+        self.init_exp_param = exp_param
+        self.anneal_timescale = anneal_timescale
+
+        if do_experience_replay:
+            self.train_step_func = self._train_step_with_buffer
+        else:
+            self.train_step_func = self._train_step_without_buffer
+        
+        self.reset_counters()
+
         self.agent = DeepQAgent(env=env, 
                                 policy=policy, 
                                 exploration_parameter=exp_param, 
                                 buffer_capacity=burnin_time)
         
         self.model = DeepQModel(n_inputs=4, n_actions=2)
-        self.target_network = DeepQModel(n_inputs=4, n_actions=2)
+
+        self.env = env
+
+        if self.do_target_network:
+            self.target_network = DeepQModel(n_inputs=4, n_actions=2)
+        else:
+            self.target_network = self.model
         self.update_target_model()
 
         self.optimizer = Adam(self.model.parameters(), lr=lr)
         
+    def reset_counters(self):
         self.episode_reward = 0 
+        self.total_time = 0
         self.ep_rewards = []
         self.episode_losses = []
         self.epoch_epsilons = []
-        self.burnin_time = burnin_time
-        self.epsilon_0 = exp_param
-        self.anneal_timescale = anneal_timescale
+        self.eval_rewards = []
+        self.eval_epsilons = []
 
-    def get_epsilon(self, time):
-        return self.epsilon_0 * 0.5**(time/self.anneal_timescale)
-
-    def update_epsilon(self, time):
-        self.epsilon = self.get_epsilon(time=time)
-        self.agent.exploration_parameter = self.epsilon
-
+    def update_exp_param(self, time):
+        new_exp_param = self.init_exp_param * 0.5**(time / self.anneal_timescale)
+        
+        self.exp_param = new_exp_param
+        self.agent.exploration_parameter = self.exp_param
 
     def update_target_model(self):
-        self.target_network.load_state_dict(self.model.state_dict())
+        """ Updates the target network if applicable """
+        if not self.do_target_network:
+            return
+        
+        if self.total_time % self.target_network_update_time == 0:
+            self.target_network.load_state_dict(self.model.state_dict())
 
-    def train_model_babymode(self, num_epochs: int = 100):
-        # train the model without ER or TN
-        def train_step():
-            # take step
-            reward, done = self.agent.take_step(self.model)
+    def _train_step_without_buffer(self):
+        """ 
+        train step using only empirical data. 
+        note: not sure if this is correct actually
+        """
+        # take step
+        state_before = self.agent.state
 
-            # compute mse loss:
-            q_values = self.model.forward(self.agent.state)
-            expected_value = q_values.max(1)[0] # get the max q value (note: not the index)
+        reward, done = self.agent.take_step(self.model)
 
-            next_state_value = torch.Tensor(np.array([reward]))
+        new_state = self.agent.state
+        
 
-            loss = nn.MSELoss()(next_state_value, expected_value)
+        # compute mse loss:
+        q_values = self.model.forward(state_before) 
+        expected_value = q_values.max(1)[0] # get the max q value (note: not the index)
 
-            self.episode_reward += reward
-            
-            return loss, done
-    
-        for _ in range(num_epochs):
-            done = False
-            while not done:
-                loss, done = train_step()
+        # next state value according to the (target) net
+        new_state_q_value = self.target_network.forward(new_state).max(1)[0]
+        new_state_value = self.gamma * new_state_q_value + reward
 
-                self.optimizer.zero_grad() # I think for stability
-                loss.backward()            
-                self.optimizer.step()    
+        loss = nn.MSELoss()(new_state_value, expected_value)
 
-            self.ep_rewards.append(self.episode_reward)
-            self.episode_reward = 0
+        
+        return loss, done
 
+    def _train_step_with_buffer(self):
+        # take step
+        reward, done = self.agent.take_step(self.model)
 
+        # sample from the buffer
+        experiences = self.agent.buffer.sample(batch_size=self.batch_size)
+        # fucky tensor thing to reshape
+        batch = Experience(*zip(*experiences))
 
-    def train_model_with_buffer(self, num_epochs: int = 100):
-        # train the model without ER or TN
-        def train_step():
-            # take step
-            reward, done = self.agent.take_step(self.model)
-            self.episode_reward += reward
+        # if the run is terminated, then the value is 0, so let's mask those out
+        # also, concatenate the batch data (just for nicer casting)
 
-            experiences = self.agent.buffer.sample(batch_size=self.batch_size)
-            # fucky tensor thing
-            batch = Experience(*zip(*experiences))
+        non_final_mask = torch.tensor([s is not None for s in batch.new_state], 
+                                        dtype=torch.bool)
+        
+        non_final_next_states = torch.cat([torch.Tensor(s) for s in batch.new_state
+                                                    if s is not None])
+        
+        state_batch = torch.cat(batch.state)
+        action_batch = torch.cat(batch.action).type(dtype=torch.int64).unsqueeze(-1)
+        reward_batch = torch.cat(batch.reward)
 
-            # Compute a mask of non-final states and concatenate the batch elements
-            # (a final state would've been the one after which simulation ended)
-            non_final_mask = torch.tensor(tuple(map(lambda s: s is not None, batch.new_state)), 
-                                          dtype=torch.bool)
-            non_final_next_states = torch.cat([torch.Tensor(s) for s in batch.new_state
-                                                        if s is not None])
-            state_batch = torch.cat(batch.state)
-            action_batch = torch.cat(batch.action).type(dtype=torch.int64).unsqueeze(-1)
-            reward_batch = torch.cat(batch.reward)
+        # q-values for the actions in the batch under current policy
+        q_values_batch = self.model.forward(state_batch)
+        state_action_values = q_values_batch.gather(1, action_batch)
 
-            # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
-            # columns of actions taken. These are the actions which would've been taken
-            # for each batch state according to policy_net
-            q_values_batch = self.model.forward(state_batch)
-            state_action_values = q_values_batch.gather(1, action_batch)
+        # best q-values for the states in the batch
+        next_state_best_q_values = torch.zeros(self.batch_size)
+        next_state_best_q_values[non_final_mask] = self.target_network.forward(non_final_next_states).max(1).values
+        
+        expected_state_action_values = reward_batch + (self.gamma * next_state_best_q_values)
 
-            q_values = torch.zeros(self.batch_size)
-            q_values[non_final_mask] = self.model.forward(non_final_next_states).max(1).values
-            
-            expected_state_action_values = (q_values * self.gamma) + reward_batch
+        loss = nn.MSELoss()(state_action_values, expected_state_action_values.unsqueeze(1))
+        
+        return loss, done
 
-            loss = nn.MSELoss()(state_action_values, expected_state_action_values.unsqueeze(1))
-            
-            return loss, done
-            
-        self.agent.burn_in(model=self.model)        
-        for _ in tqdm(range(num_epochs), total=num_epochs, desc=self.episode_reward):
-            done = False
-            while not done:
-                loss, done = train_step()
-
-                self.optimizer.zero_grad() # I think for stability
-                loss.backward()            
-                torch.nn.utils.clip_grad_value_(self.model.parameters(), 100)
-                self.optimizer.step()    
-
-            # print(self.episode_reward)
-            self.ep_rewards.append(self.episode_reward)
-            self.episode_reward = 0
-
-
-    def train_model_with_buffer_and_target_network(self, num_epochs: int = 100):
-        # train the model without ER or TN
-        def train_step():
-            # take step
-            reward, done = self.agent.take_step(self.model)
-            self.episode_reward += reward
-
-            experiences = self.agent.buffer.sample(batch_size=self.batch_size)
-            # fucky tensor thing
-            batch = Experience(*zip(*experiences))
-
-            # Compute a mask of non-final states and concatenate the batch elements
-            # (a final state would've been the one after which simulation ended)
-            non_final_mask = torch.tensor(tuple(map(lambda s: s is not None, batch.new_state)), 
-                                          dtype=torch.bool)
-            non_final_next_states = torch.cat([torch.Tensor(s) for s in batch.new_state
-                                                        if s is not None])
-            state_batch = torch.cat(batch.state)
-            action_batch = torch.cat(batch.action).type(dtype=torch.int64).unsqueeze(-1)
-            reward_batch = torch.cat(batch.reward)
-
-            # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
-            # columns of actions taken. These are the actions which would've been taken
-            # for each batch state according to policy_net
-            q_values_batch = self.model.forward(state_batch)
-            state_action_values = q_values_batch.gather(1, action_batch)
-
-            q_values = torch.zeros(self.batch_size)
-            q_values[non_final_mask] = self.target_network.forward(non_final_next_states).max(1).values
-            
-            expected_state_action_values = (q_values * self.gamma) + reward_batch
-
-            loss = nn.MSELoss()(state_action_values, expected_state_action_values.unsqueeze(1))
-            
-            return loss, done
-            
+    def train_model(self, num_epochs: int = 100):
         self.agent.burn_in(model=self.model)     
-        n_steps = 0   
-        # self.anneal_timescale = num_epochs*1000
+
         for epoch_i in tqdm(range(num_epochs), total=num_epochs, desc=self.episode_reward):
             done = False
+            episode_reward = 0
             while not done:
-                self.update_epsilon(time=epoch_i)
+                loss, done = self.train_step_func()
 
-                loss, done = train_step()
-
-                self.optimizer.zero_grad() # I think for stability
-                loss.backward()      
+                self.optimizer.zero_grad() # remove gradients from previous steps
+                loss.backward()            # compute gradients
                 torch.nn.utils.clip_grad_value_(self.model.parameters(), 100)
 
-                self.optimizer.step()    
-                n_steps += 1
+                self.optimizer.step()      # apply gradients
 
-                if n_steps % self.target_network_update_time == 0:
-                    self.update_target_model()
+                self.total_time += 1
+                episode_reward += 1
+                self.update_exp_param(time=epoch_i)
+                self.update_target_model()      # (only updates the model if applicable)
 
-            self.epoch_epsilons.append(self.epsilon)
-            # print(self.episode_reward)
-            self.ep_rewards.append(self.episode_reward)
-            self.episode_reward = 0
+            # storing data for plotting
+            if epoch_i % self.eval_interval == 0:
+                mean_reward = self.evaluate_model()
+                self.eval_rewards.append(mean_reward)
+                self.eval_epsilons.append(self.exp_param)
 
+            self.episode_losses.append(loss.item())
+            self.epoch_epsilons.append(self.exp_param)
+            self.ep_rewards.append(episode_reward)
+
+
+    def evaluate_model(self):
+        """ evaluates the model across a few epochs/episodes """  
+        rewards = np.zeros((self.n_eval_episodes))
+
+        for i in range(self.n_eval_episodes):
+            state, _ = self.env.reset()
+            done = False
+            ep_reward = 0
+            
+            while not done:
+                state = torch.from_numpy(state).unsqueeze(0)
+
+                with torch.no_grad():
+                    q_values = self.model.forward(state)
+
+                action = Policy.GREEDY(q_values)
+
+                state, reward, terminated, truncated, _ = self.env.step(action=action)
+
+                ep_reward += reward
+
+                done = terminated or truncated
+
+            rewards[i] = ep_reward
+
+        mean_reward = np.mean(rewards)
+        self.env.reset()
+        
+        return mean_reward
 
     def plot_ep_rewards(self):
         fig, ax = plt.subplots(1,1)
@@ -217,9 +223,3 @@ class CartPoleDQN:
 
         plt.show()
 
-    def test_model(self):
-        # self.train_model_babymode(num_epochs=100)
-        # self.train_model_with_buffer(num_epochs=500)
-        self.train_model_with_buffer_and_target_network(num_epochs=500)
-        self.plot_ep_rewards()
-        self.env.close()

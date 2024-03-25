@@ -86,12 +86,12 @@ if __name__ == "__main__":
             'lr': 1e-3,  
             'exp_param': 0.2,
             'policy': Policy.EGREEDY,
-            'batch_size': 128,
+            'batch_size': 64,
             'gamma': 0.99,
             'target_network_update_time': 100,
             'do_target_network': True,
             'do_experience_replay': True,
-            'anneal_timescale': num_epochs*1e10,
+            'anneal_timescale': num_epochs, # *1e10,
             'burnin_time': 10000,   # == buffer_capacity
             'eval_interval': 10,
             'n_eval_episodes': 10,
@@ -100,4 +100,4 @@ if __name__ == "__main__":
     plot_cartpole_learning(num_epochs=num_epochs, 
                            num_repetitions=num_repetitions, 
                             model_params=model_params,
-                            apply_annealing=False)
+                            apply_annealing=True)

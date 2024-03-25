@@ -150,7 +150,7 @@ class CartPoleDQN:
         
         return loss, done
 
-    def train_model(self, num_epochs: int = 100):
+    def train_model(self, num_epochs: int = 100, apply_annealing=True):
         self.agent.burn_in(model=self.model)     
 
         for epoch_i in tqdm(range(num_epochs), total=num_epochs, desc=self.episode_reward):
@@ -167,7 +167,8 @@ class CartPoleDQN:
 
                 self.total_time += 1
                 episode_reward += 1
-                self.update_exp_param(time=epoch_i)
+                if apply_annealing:
+                    self.update_exp_param(time=epoch_i)
                 self.update_target_model()      # (only updates the model if applicable)
 
             # storing data for plotting

@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from policies import Policy
     
 
-def plot_cartpole_learning(num_repetitions: int, num_epochs: int, model_params, render_final_dqn=True):
+def plot_cartpole_learning(num_repetitions: int, num_epochs: int, model_params, render_final_dqn=True, apply_annealing=True):
     losses = np.zeros([num_repetitions, num_epochs])
     epsilons = np.zeros([num_repetitions, num_epochs])
     rewards = np.zeros([num_repetitions, num_epochs])
@@ -23,7 +23,7 @@ def plot_cartpole_learning(num_repetitions: int, num_epochs: int, model_params, 
         dqn = CartPoleDQN(env=env,
                           **model_params)
         
-        dqn.train_model(num_epochs=num_epochs)    
+        dqn.train_model(num_epochs=num_epochs, apply_annealing=apply_annealing)    
 
         eval_rewards[repetition_i] = dqn.eval_rewards
         epsilons[repetition_i] = dqn.epoch_epsilons
@@ -72,7 +72,7 @@ def plot_cartpole_learning(num_repetitions: int, num_epochs: int, model_params, 
 
 
 if __name__ == "__main__":
-    num_epochs = 300
+    num_epochs = 700
     model_params = {
             'lr': 5e-4,  
             'exp_param': 1.,
@@ -93,4 +93,5 @@ if __name__ == "__main__":
     
     plot_cartpole_learning(num_epochs=num_epochs, 
                            num_repetitions=num_repetitions, 
-                            model_params=model_params)
+                            model_params=model_params,
+                            apply_annealing=True)

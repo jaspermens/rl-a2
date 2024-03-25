@@ -21,10 +21,11 @@ class CartPoleDQN:
                  target_network_update_time: int,
                  do_target_network: bool,
                  do_experience_replay: bool,
-                 anneal_timescale: int,
                  burnin_time: int,
                  eval_interval: int,
                  n_eval_episodes: int,
+                 anneal_exp_param: bool,
+                 anneal_timescale: int,
                  ):
         
         self.lr = lr
@@ -39,6 +40,7 @@ class CartPoleDQN:
         
         self.burnin_time = burnin_time
         self.init_exp_param = exp_param
+        self.anneal_exp_param = anneal_exp_param
         self.anneal_timescale = anneal_timescale
 
         if do_experience_replay:
@@ -66,6 +68,7 @@ class CartPoleDQN:
         self.optimizer = Adam(self.model.parameters(), lr=lr)
         
     def reset_counters(self):
+        self.exp_param = self.init_exp_param
         self.episode_reward = 0 
         self.total_time = 0
         self.ep_rewards = []
@@ -167,7 +170,7 @@ class CartPoleDQN:
 
                 self.total_time += 1
                 episode_reward += 1
-                if apply_annealing:
+                if self.anneal_exp_param:
                     self.update_exp_param(time=epoch_i)
                 self.update_target_model()      # (only updates the model if applicable)
 
@@ -179,9 +182,8 @@ class CartPoleDQN:
                     self.eval_epsilons.append(self.exp_param)
 
             self.episode_losses.append(loss.item())
-            if apply_annealing:
-                self.epoch_epsilons.append(self.exp_param)
             self.ep_rewards.append(episode_reward)
+            self.epoch_epsilons.append(self.exp_param)
 
 
     def evaluate_model(self):

@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from policies import Policy
     
 
-def plot_cartpole_learning(num_repetitions: int, num_epochs: int, model_params, render_final_dqn=True, apply_annealing=True):
+def plot_cartpole_learning(num_repetitions: int, num_epochs: int, model_params, render_final_dqn=True):
     losses = np.zeros([num_repetitions, num_epochs])
     epsilons = np.zeros([num_repetitions, num_epochs])
     rewards = np.zeros([num_repetitions, num_epochs])
@@ -21,13 +21,10 @@ def plot_cartpole_learning(num_repetitions: int, num_epochs: int, model_params, 
         dqn = CartPoleDQN(env=env,
                           **model_params)
         
-        dqn.train_model(num_epochs=num_epochs, apply_annealing=apply_annealing)    
+        dqn.train_model(num_epochs=num_epochs)    
 
         eval_rewards[repetition_i] = dqn.eval_rewards
-        if apply_annealing:
-            epsilons[repetition_i] = dqn.epoch_epsilons
-        else:
-            epsilons = dqn.init_exp_param
+        epsilons[repetition_i] = dqn.epoch_epsilons
 
 
     fig, (ax, axlegend) = plt.subplots(1, 2, figsize=(14, 7), width_ratios=[9,1])
@@ -41,10 +38,7 @@ def plot_cartpole_learning(num_repetitions: int, num_epochs: int, model_params, 
     ax.fill_between(eval_times, *np.quantile(eval_rewards, q=[.33, .67], axis=0), interpolate=True, alpha=.5, zorder=0, color='teal',label="1-$\sigma$? quantile")
     ax.fill_between(eval_times, np.min(eval_rewards, axis=0), np.max(eval_rewards, axis=0), interpolate=True, alpha=.3, zorder=-1, color='teal',label="Total range")
     ax1 = ax.twinx()
-    if apply_annealing:
-        ax1.plot(epsilons[0],label="Exploration parameter")
-    else:
-        ax1.plot(epsilons,label="Exploration parameter")
+    ax1.plot(epsilons[0],label="Exploration parameter")
 
     # aesthetics
     ax.set_title(f"Results of {str(model_params['policy'])[14:-23]} policy for {num_repetitions} repetitions of {num_epochs} epochs", fontsize=20)
@@ -58,7 +52,7 @@ def plot_cartpole_learning(num_repetitions: int, num_epochs: int, model_params, 
 
     target_string, anneal = "target", "anneal"
     
-    if apply_annealing:
+    if dqn.anneal_exp_param:
         hyper_param_txt = f"$\\alpha$ = {dqn.lr}\n$\epsilon_0$ = {dqn.init_exp_param}\n$\gamma$ = {dqn.gamma}\n$\omega_{{{target_string}}}$ = {dqn.target_network_update_time}\
         \n$\epsilon_{{{anneal}}}$ = {dqn.anneal_timescale}\nburn-in = {dqn.burnin_time}"
     else:
@@ -86,18 +80,19 @@ if __name__ == "__main__":
             'lr': 1e-3,  
             'exp_param': 0.2,
             'policy': Policy.EGREEDY,
-            'batch_size': 64,
+            'batch_size': 128,
             'gamma': 0.99,
             'target_network_update_time': 100,
             'do_target_network': True,
             'do_experience_replay': True,
-            'anneal_timescale': num_epochs, # *1e10,
             'burnin_time': 10000,   # == buffer_capacity
             'eval_interval': 10,
             'n_eval_episodes': 10,
+            'anneal_exp_param': False,
+            'anneal_timescale': num_epochs,
     }
     
     plot_cartpole_learning(num_epochs=num_epochs, 
                            num_repetitions=num_repetitions, 
                             model_params=model_params,
-                            apply_annealing=True)
+                            )

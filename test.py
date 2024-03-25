@@ -14,8 +14,6 @@ def plot_cartpole_learning(num_repetitions: int, num_epochs: int, model_params, 
     eval_times = np.arange(0, num_epochs, model_params['eval_interval'])
     eval_rewards = np.zeros([num_repetitions, len(eval_times)])
 
-    epsilons = np.zeros([num_repetitions, num_epochs])
-
     for repetition_i in range(num_repetitions):
         env = gym.make("CartPole-v1")#, render_mode="human") 
         env.reset(seed=np.random.randint(0,999999999))
@@ -26,7 +24,10 @@ def plot_cartpole_learning(num_repetitions: int, num_epochs: int, model_params, 
         dqn.train_model(num_epochs=num_epochs, apply_annealing=apply_annealing)    
 
         eval_rewards[repetition_i] = dqn.eval_rewards
-        epsilons[repetition_i] = dqn.epoch_epsilons
+        if apply_annealing:
+            epsilons[repetition_i] = dqn.epoch_epsilons
+        else:
+            epsilons = dqn.init_exp_param
 
 
     fig, (ax, axlegend) = plt.subplots(1, 2, figsize=(14, 7), width_ratios=[9,1])
@@ -40,7 +41,10 @@ def plot_cartpole_learning(num_repetitions: int, num_epochs: int, model_params, 
     ax.fill_between(eval_times, *np.quantile(eval_rewards, q=[.33, .67], axis=0), interpolate=True, alpha=.5, zorder=0, color='teal',label="1-$\sigma$? quantile")
     ax.fill_between(eval_times, np.min(eval_rewards, axis=0), np.max(eval_rewards, axis=0), interpolate=True, alpha=.3, zorder=-1, color='teal',label="Total range")
     ax1 = ax.twinx()
-    ax1.plot(epsilons[0],label="Exploration parameter")
+    if apply_annealing:
+        ax1.plot(epsilons[0],label="Exploration parameter")
+    else:
+        ax1.plot(epsilons,label="Exploration parameter")
 
     # aesthetics
     ax.set_title(f"Results of {str(model_params['policy'])[14:-23]} policy for {num_repetitions} repetitions of {num_epochs} epochs", fontsize=20)
@@ -72,14 +76,15 @@ def plot_cartpole_learning(num_repetitions: int, num_epochs: int, model_params, 
 
 
 if __name__ == "__main__":
-    num_epochs = 700
+    num_epochs = 1000
+    num_repetitions = 3
     model_params = {
-            'lr': 5e-4,  
-            'exp_param': 1.,
-            'policy': Policy.SOFTMAX,
+            'lr': 1e-3,  
+            'exp_param': 0.6,
+            'policy': Policy.EGREEDY,
             'batch_size': 128,
-            'gamma': 0.9,
-            'target_network_update_time': 200,
+            'gamma': 0.99,
+            'target_network_update_time': 100,
             'do_target_network': True,
             'do_experience_replay': True,
             'anneal_timescale': num_epochs*1e10,
@@ -87,11 +92,8 @@ if __name__ == "__main__":
             'eval_interval': 10,
             'n_eval_episodes': 10,
     }
-
-    num_repetitions = 3
-    
     
     plot_cartpole_learning(num_epochs=num_epochs, 
                            num_repetitions=num_repetitions, 
                             model_params=model_params,
-                            apply_annealing=True)
+                            apply_annealing=False)

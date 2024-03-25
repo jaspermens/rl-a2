@@ -175,10 +175,12 @@ class CartPoleDQN:
             if epoch_i % self.eval_interval == 0:
                 mean_reward = self.evaluate_model()
                 self.eval_rewards.append(mean_reward)
-                self.eval_epsilons.append(self.exp_param)
+                if apply_annealing:
+                    self.eval_epsilons.append(self.exp_param)
 
             self.episode_losses.append(loss.item())
-            self.epoch_epsilons.append(self.exp_param)
+            if apply_annealing:
+                self.epoch_epsilons.append(self.exp_param)
             self.ep_rewards.append(episode_reward)
 
 

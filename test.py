@@ -80,7 +80,7 @@ if __name__ == "__main__":
     num_repetitions = 3
     model_params = {
             'lr': 1e-3,  
-            'exp_param': 0.6,
+            'exp_param': 0.2,
             'policy': Policy.EGREEDY,
             'batch_size': 128,
             'gamma': 0.99,

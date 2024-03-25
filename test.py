@@ -58,8 +58,12 @@ def plot_cartpole_learning(num_repetitions: int, num_epochs: int, model_params, 
 
     target_string, anneal = "target", "anneal"
     
-    hyper_param_txt = f"$\\alpha$ = {dqn.lr}\n$\epsilon_0$ = {dqn.init_exp_param}\n$\gamma$ = {dqn.gamma}\n$\omega_{{{target_string}}}$ = {dqn.target_network_update_time}\
-    \n$\epsilon_{{{anneal}}}$ = {dqn.anneal_timescale}\nburn-in = {dqn.burnin_time}"
+    if apply_annealing:
+        hyper_param_txt = f"$\\alpha$ = {dqn.lr}\n$\epsilon_0$ = {dqn.init_exp_param}\n$\gamma$ = {dqn.gamma}\n$\omega_{{{target_string}}}$ = {dqn.target_network_update_time}\
+        \n$\epsilon_{{{anneal}}}$ = {dqn.anneal_timescale}\nburn-in = {dqn.burnin_time}"
+    else:
+        hyper_param_txt = f"$\\alpha$ = {dqn.lr}\n$\epsilon_0$ = {dqn.init_exp_param}\n$\gamma$ = {dqn.gamma}\n$\omega_{{{target_string}}}$ = {dqn.target_network_update_time}\
+        \n$\epsilon_{{{anneal}}}$ = $\infty$\nburn-in = {dqn.burnin_time}"
     
     axlegend.set_title(f"Hyperparameters", x=0.6)
     axlegend.text(0.0, 0.7, hyper_param_txt, fontsize=12)

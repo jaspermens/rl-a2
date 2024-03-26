@@ -2,7 +2,9 @@ from enum import Enum, auto
 from dqn import DeepQModel
 import torch
 import numpy as np
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+UNIFORM_PROBABILITIES = torch.tensor([1.,1.], dtype=torch.float32, device=DEVICE)
 
 def act_greedy(q_values: torch.Tensor, exp_param: None = None) -> int:
     _, maxind = torch.max(q_values, dim=1)
@@ -13,7 +15,7 @@ def act_egreedy(q_values: torch.Tensor, epsilon: float = None) -> int:
         raise ValueError("attempted to use epsilon-greedy policy without epsilon")
     
     if np.random.random() < epsilon:
-        action = np.random.choice(len(q_values))
+        action = torch.multinomial(input=UNIFORM_PROBABILITIES, num_samples=1).item()
     else:
         action = act_greedy(q_values=q_values)
 
@@ -22,10 +24,9 @@ def act_egreedy(q_values: torch.Tensor, epsilon: float = None) -> int:
 def act_softmax(q_values: torch.Tensor, temperature: float = None) -> int:
     if temperature is None:
         raise ValueError("attempted to use softmax policy without temperature")
-    x = q_values.numpy()[0]/temperature
-    z = x - max(x)
-    softmax = (np.exp(z))/((sum(np.exp(z))))
-    action = np.random.choice([0,1], 1, p=softmax)[0]
+    
+    softmax = torch.nn.functional.softmax(input=q_values[0], dim=0)
+    action = torch.multinomial(input=softmax, num_samples=1).item()
     return action
 
 

@@ -8,6 +8,7 @@ Experience = namedtuple(
     field_names=["state", "action", "reward", "done", "new_state"],
 )
 
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class ReplayBuffer:
     def __init__(self, capacity: int) -> None:
@@ -15,20 +16,21 @@ class ReplayBuffer:
 
     def append(self, state, action, reward, done, new_state) -> None:
         def to_tensor(x):
+            if isinstance(x, torch.Tensor):
+                return x
             if x is None:
                 return x
-            return torch.Tensor(np.array([x]))
+            return torch.tensor(np.array([x]), device=DEVICE, dtype=torch.float32)
         
-        action = int(action)
+        if new_state is not None and not isinstance(new_state, torch.Tensor):
+            new_state = to_tensor(new_state)
         self.buffer.append(Experience(to_tensor(state), 
-                                      to_tensor(action),
+                                      torch.tensor(np.array([action]), device=DEVICE, dtype=torch.int64),
                                       to_tensor(reward),
                                       to_tensor(done),
-                                      to_tensor(new_state),
+                                      new_state,
         ))
 
-    # def append(self, experience: Experience) -> None:
-    #     self.buffer.append(experience)
 
     def sample(self, batch_size: int):
         return random.sample(self.buffer, batch_size)

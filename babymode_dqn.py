@@ -10,6 +10,9 @@ import matplotlib.pyplot as plt
 from data_handling import Experience
 from tqdm import tqdm
 
+
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 class CartPoleDQN:
     def __init__(self, 
                  env: gym.Env,
@@ -55,14 +58,14 @@ class CartPoleDQN:
                                 exploration_parameter=exp_param, 
                                 buffer_capacity=burnin_time)
         
-        self.model = DeepQModel(n_inputs=4, n_actions=2)
+        self.model = DeepQModel(n_inputs=4, n_actions=2).to(device=DEVICE)
+        if self.do_target_network:
+            self.target_network = DeepQModel(n_inputs=4, n_actions=2).to(device=DEVICE)
+        else:
+            self.target_network = self.model
 
         self.env = env
 
-        if self.do_target_network:
-            self.target_network = DeepQModel(n_inputs=4, n_actions=2)
-        else:
-            self.target_network = self.model
         self.update_target_model()
 
         self.optimizer = Adam(self.model.parameters(), lr=lr)
@@ -130,13 +133,12 @@ class CartPoleDQN:
         # also, concatenate the batch data (just for nicer casting)
 
         non_final_mask = torch.tensor([s is not None for s in batch.new_state], 
-                                        dtype=torch.bool)
+                                        dtype=torch.bool, device=DEVICE)
         
-        non_final_next_states = torch.cat([torch.Tensor(s) for s in batch.new_state
+        non_final_next_states = torch.cat([s for s in batch.new_state
                                                     if s is not None])
-        
         state_batch = torch.cat(batch.state)
-        action_batch = torch.cat(batch.action).type(dtype=torch.int64).unsqueeze(-1)
+        action_batch = torch.cat(batch.action).unsqueeze(-1)
         reward_batch = torch.cat(batch.reward)
 
         # q-values for the actions in the batch under current policy
@@ -144,8 +146,9 @@ class CartPoleDQN:
         state_action_values = q_values_batch.gather(1, action_batch)
 
         # best q-values for the states in the batch
-        next_state_best_q_values = torch.zeros(self.batch_size)
-        next_state_best_q_values[non_final_mask] = self.target_network.forward(non_final_next_states).max(1).values
+        next_state_best_q_values = torch.zeros(self.batch_size, device=DEVICE)
+        with torch.no_grad():
+            next_state_best_q_values[non_final_mask] = self.target_network.forward(non_final_next_states).max(1).values
         
         expected_state_action_values = reward_batch + (self.gamma * next_state_best_q_values)
 
@@ -196,7 +199,7 @@ class CartPoleDQN:
             ep_reward = 0
             
             while not done:
-                state = torch.from_numpy(state).unsqueeze(0)
+                state = torch.tensor(np.array([state]), device=DEVICE, dtype=torch.float32)
 
                 with torch.no_grad():
                     q_values = self.model.forward(state)
@@ -238,7 +241,7 @@ class CartPoleDQN:
             ep_reward = 0
             
             while not done:
-                state = torch.from_numpy(state).unsqueeze(0)
+                state = torch.tensor(np.array([state]), device=DEVICE, dtype=torch.float32)
 
                 with torch.no_grad():
                     q_values = self.model.forward(state)

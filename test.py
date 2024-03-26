@@ -74,7 +74,7 @@ def plot_cartpole_learning(num_repetitions: int, num_epochs: int, model_params, 
 
 
 if __name__ == "__main__":
-    num_epochs = 1000
+    num_epochs = 100
     num_repetitions = 3
     model_params = {
             'lr': 1e-3,  

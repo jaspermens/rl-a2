@@ -8,6 +8,8 @@ from torch import nn
 from data_handling import Experience, ReplayBuffer
 from dqn import DeepQModel
 
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 class DeepQAgent:
     def __init__(self, env: gym.Env, 
                  policy: Policy, 
@@ -24,14 +26,14 @@ class DeepQAgent:
         self.buffer = ReplayBuffer(capacity=buffer_capacity)
         
     def reset(self):
-        self.state, _ = self.env.reset()
+        state, _ = self.env.reset()
+        self.state = torch.tensor(np.array([state]), device=DEVICE, dtype=torch.float32)#.unsqueeze(0)
 
     def select_action(self, model: DeepQModel):
         # basically self.model.evaluate(state)
-        state = torch.tensor(np.array([self.state]))
 
         # get q values:
-        q_values = model.forward(state)
+        q_values = model.forward(self.state)
 
         # greedy best action:
         action = self.policy(q_values, self.exploration_parameter)
@@ -51,10 +53,10 @@ class DeepQAgent:
         self.buffer.append(state=self.state, action=action, reward=reward, new_state=new_state, done=done)
         #
         
-        self.state = new_state           
-        
         if done:
             self.reset()
+        else:
+            self.state = torch.tensor(np.array([new_state]), dtype=torch.float32, device=DEVICE)#.unsqueeze(0)
 
         return reward, done
     

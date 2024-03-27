@@ -1,5 +1,4 @@
-from enum import Enum, auto
-from dqn import DeepQModel
+from enum import Enum
 import torch
 import numpy as np
 
@@ -7,6 +6,7 @@ import numpy as np
 def act_greedy(q_values: torch.Tensor, exp_param: None = None) -> int:
     _, maxind = torch.max(q_values, dim=1)
     return int(maxind.item())
+
 
 def act_egreedy(q_values: torch.Tensor, epsilon: float = None) -> int:
     if epsilon is None:
@@ -19,6 +19,7 @@ def act_egreedy(q_values: torch.Tensor, epsilon: float = None) -> int:
 
     return action
 
+
 def act_softmax(q_values: torch.Tensor, temperature: float = None) -> int:
     if temperature is None:
         raise ValueError("attempted to use softmax policy without temperature")
@@ -29,8 +30,9 @@ def act_softmax(q_values: torch.Tensor, temperature: float = None) -> int:
     return action
 
 
-def act_random(q_values: torch.Tensor, exp_param: float):
+def act_random(q_values: torch.Tensor, exp_param: None = None):
     return np.random.randint(0, 2)
+
 
 class Policy(Enum):
     GREEDY = act_greedy

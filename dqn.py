@@ -3,6 +3,7 @@ import torch.nn.functional as F
 import numpy as np
 import torch
 
+
 class DeepQModel(nn.Module):
     def __init__(self, n_inputs, n_actions):
         super().__init__()

@@ -244,18 +244,6 @@ class CartPoleDQN:
         
         return mean_reward
 
-    def plot_ep_rewards(self):
-        fig, ax = plt.subplots(1,1)
-        ax.plot(self.ep_rewards)  
-        ax1 = ax.twinx() 
-        ax1.plot(self.epoch_epsilons, ls='--', c='red')
-        plt.savefig('ep_rewards.png')
-        from scipy.signal import medfilt
-        ax.plot(medfilt(self.ep_rewards, kernel_size=5), c='black')
-        plt.savefig('ep_rewards.png')
-
-        plt.show()
-
     def dqn_render_run(self, env, n_episodes_to_plot=10):
         """Runs a single evaluation episode while rendering the environment for visualization."""
 

@@ -3,6 +3,7 @@ import numpy as np
 import random
 import torch
 
+
 Experience = namedtuple(
     "Experience",
     field_names=["state", "action", "reward", "done", "new_state"],
@@ -26,9 +27,6 @@ class ReplayBuffer:
                                       to_tensor(done),
                                       to_tensor(new_state),
         ))
-
-    # def append(self, experience: Experience) -> None:
-    #     self.buffer.append(experience)
 
     def sample(self, batch_size: int):
         return random.sample(self.buffer, batch_size)

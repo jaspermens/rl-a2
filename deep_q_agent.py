@@ -3,10 +3,10 @@ import gymnasium as gym
 
 from policies import Policy
 import torch
-from torch import nn
 
-from data_handling import Experience, ReplayBuffer
+from data_handling import ReplayBuffer
 from dqn import DeepQModel
+
 
 class DeepQAgent:
     def __init__(self, env: gym.Env, 

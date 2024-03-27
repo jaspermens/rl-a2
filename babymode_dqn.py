@@ -26,6 +26,7 @@ class CartPoleDQN:
                  n_eval_episodes: int,
                  anneal_exp_param: bool,
                  anneal_timescale: int,
+                 early_stopping_reward: int,
                  ):
         
         self.lr = lr
@@ -34,6 +35,8 @@ class CartPoleDQN:
 
         self.eval_interval = eval_interval
         self.n_eval_episodes = n_eval_episodes
+
+        self.early_stopping_reward = early_stopping_reward
 
         self.target_network_update_time = target_network_update_time
         self.do_target_network = do_target_network
@@ -77,11 +80,14 @@ class CartPoleDQN:
         self.eval_rewards = []
         self.eval_epsilons = []
 
+    def exp_param_at_time(self, time):
+        return self.init_exp_param * 0.5**(time / self.anneal_timescale)
+    
     def update_exp_param(self, time):
-        new_exp_param = self.init_exp_param * 0.5**(time / self.anneal_timescale)
+        new_exp_param = self.exp_param_at_time(time)
         
         self.exp_param = new_exp_param
-        self.agent.exploration_parameter = self.exp_param
+        self.agent.exploration_parameter = new_exp_param
 
     def update_target_model(self):
         """ Updates the target network if applicable """
@@ -153,7 +159,7 @@ class CartPoleDQN:
         
         return loss, done
 
-    def train_model(self, num_epochs: int = 100, apply_annealing=True):
+    def train_model(self, num_epochs: int):
         self.agent.burn_in(model=self.model)     
 
         for epoch_i in tqdm(range(num_epochs), total=num_epochs, desc=self.episode_reward):
@@ -170,23 +176,45 @@ class CartPoleDQN:
 
                 self.total_time += 1
                 episode_reward += 1
+
                 if self.anneal_exp_param:
                     self.update_exp_param(time=epoch_i)
+
                 self.update_target_model()      # (only updates the model if applicable)
 
             # storing data for plotting
-            if epoch_i % self.eval_interval == 0:
-                mean_reward = self.evaluate_model()
-                self.eval_rewards.append(mean_reward)
-                if apply_annealing:
-                    self.eval_epsilons.append(self.exp_param)
-
             self.episode_losses.append(loss.item())
             self.ep_rewards.append(episode_reward)
             self.epoch_epsilons.append(self.exp_param)
 
+            # evaluate the model if it's time
+            if epoch_i % self.eval_interval == 0:
+                stop_early = self.evaluate_model()
+                if stop_early:
+                    break
 
-    def evaluate_model(self):
+
+    def evaluate_model(self) -> bool:                
+        # evaluation routine
+        if self.anneal_exp_param:
+            self.eval_epsilons.append(self.exp_param)
+            
+        mean_reward = self.mean_eval_reward()
+        self.eval_rewards.append(mean_reward)
+
+        if mean_reward < self.early_stopping_reward:
+            return False
+        
+        mean_reward = np.mean([self.mean_eval_reward() for _ in range(3)]) 
+
+        if mean_reward > self.early_stopping_reward:
+            print("stopping early!")
+            return True
+
+        return False       
+
+    
+    def mean_eval_reward(self):
         """ evaluates the model across a few epochs/episodes """  
         rewards = np.zeros((self.n_eval_episodes))
 

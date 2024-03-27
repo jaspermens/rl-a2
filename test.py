@@ -7,12 +7,14 @@ from policies import Policy
     
 
 def plot_cartpole_learning(num_repetitions: int, num_epochs: int, model_params, render_final_dqn=True):
-    losses = np.zeros([num_repetitions, num_epochs])
-    epsilons = np.zeros([num_repetitions, num_epochs])
-    rewards = np.zeros([num_repetitions, num_epochs])
-
     eval_times = np.arange(0, num_epochs, model_params['eval_interval'])
     eval_rewards = np.zeros([num_repetitions, len(eval_times)])
+
+    def pad_early_stopped(arr1: list[int], arr2):
+        """pads arr1 to match the length of arr2"""
+        npad = len(arr2) - len(arr1)
+        padded = np.pad(np.array(arr1), pad_width=(0, npad), mode='constant', constant_values=500)
+        return padded
 
     for repetition_i in range(num_repetitions):
         env = gym.make("CartPole-v1")#, render_mode="human") 
@@ -23,9 +25,9 @@ def plot_cartpole_learning(num_repetitions: int, num_epochs: int, model_params, 
         
         dqn.train_model(num_epochs=num_epochs)    
 
-        eval_rewards[repetition_i] = dqn.eval_rewards
-        epsilons[repetition_i] = dqn.epoch_epsilons
-
+        eval_rewards[repetition_i] = pad_early_stopped(dqn.eval_rewards, eval_rewards[0])
+    
+    epsilons = [dqn.exp_param_at_time(time) for time in range(num_epochs)]
 
     fig, (ax, axlegend) = plt.subplots(1, 2, figsize=(14, 7), width_ratios=[9,1])
 
@@ -38,7 +40,7 @@ def plot_cartpole_learning(num_repetitions: int, num_epochs: int, model_params, 
     ax.fill_between(eval_times, *np.quantile(eval_rewards, q=[.33, .67], axis=0), interpolate=True, alpha=.5, zorder=0, color='teal',label="1-$\sigma$? quantile")
     ax.fill_between(eval_times, np.min(eval_rewards, axis=0), np.max(eval_rewards, axis=0), interpolate=True, alpha=.3, zorder=-1, color='teal',label="Total range")
     ax1 = ax.twinx()
-    ax1.plot(epsilons[0],label="Exploration parameter")
+    ax1.plot(epsilons, label="Exploration parameter")
 
     # aesthetics
     ax.set_title(f"Results of {str(model_params['policy'])[14:-23]} policy for {num_repetitions} repetitions of {num_epochs} epochs", fontsize=20)
@@ -74,8 +76,8 @@ def plot_cartpole_learning(num_repetitions: int, num_epochs: int, model_params, 
 
 
 if __name__ == "__main__":
-    num_epochs = 1000
-    num_repetitions = 3
+    num_epochs = 300
+    num_repetitions = 5
     model_params = {
             'lr': 1e-3,  
             'exp_param': 0.2,
@@ -90,6 +92,7 @@ if __name__ == "__main__":
             'n_eval_episodes': 10,
             'anneal_exp_param': False,
             'anneal_timescale': num_epochs,
+            'early_stopping_reward': 500,
     }
     
     plot_cartpole_learning(num_epochs=num_epochs, 

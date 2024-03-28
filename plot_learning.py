@@ -3,10 +3,13 @@ import gymnasium as gym
 
 from babymode_dqn import CartPoleDQN
 import matplotlib.pyplot as plt
-from policies import Policy
     
 
-def plot_cartpole_learning(num_repetitions: int, num_epochs: int, model_params, render_final_dqn=True):
+def plot_cartpole_learning(num_repetitions: int, num_epochs: int, 
+                           model_params: dict, render_final_dqn=True, 
+                           filename: str = "test_results.png"):
+    """ Plots the (averaged) learning progression for the given parameter combination """
+
     eval_times = np.arange(0, num_epochs, model_params['eval_interval'])
     eval_rewards = np.zeros([num_repetitions, len(eval_times)])
 
@@ -25,9 +28,9 @@ def plot_cartpole_learning(num_repetitions: int, num_epochs: int, model_params, 
         
         dqn.train_model(num_epochs=num_epochs)    
 
-        eval_rewards[repetition_i] = pad_early_stopped(dqn.eval_rewards, eval_rewards[0])
-    
-    epsilons = [dqn.exp_param_at_time(time) for time in range(num_epochs)]
+        eval_rewards[repetition_i] = pad_early_stopped(dqn.eval_rewards, eval_rewards[0]) 
+
+    epsilons = [dqn.exp_param_at_epoch(epoch=ep) for ep in range(num_epochs)]
 
     fig, (ax, axlegend) = plt.subplots(1, 2, figsize=(14, 7), width_ratios=[9,1])
 
@@ -54,48 +57,23 @@ def plot_cartpole_learning(num_repetitions: int, num_epochs: int, model_params, 
 
     target_string, anneal = "target", "anneal"
     
-    if dqn.anneal_exp_param:
-        hyper_param_txt = f"$\\alpha$ = {dqn.lr}\n$\epsilon_0$ = {dqn.init_exp_param}\n$\gamma$ = {dqn.gamma}\n$\omega_{{{target_string}}}$ = {dqn.target_network_update_time}\
-        \n$\epsilon_{{{anneal}}}$ = {dqn.anneal_timescale}\nburn-in = {dqn.burnin_time}"
+    if model_params['anneal_exp_param']:
+        hyper_param_txt = f"$\\alpha$ = {model_params['lr']}\n$\epsilon_0$ = {model_params['exp_param']}\n$\gamma$ = {model_params['gamma']}\n$\omega_{{{target_string}}}$ = {model_params['target_network_update_time']}\
+        \n$\epsilon_{{{anneal}}}$ = {model_params['anneal_exp_param']}\nbuffer size = {model_params['buffer_capacity']}"
     else:
-        hyper_param_txt = f"$\\alpha$ = {dqn.lr}\n$\epsilon_0$ = {dqn.init_exp_param}\n$\gamma$ = {dqn.gamma}\n$\omega_{{{target_string}}}$ = {dqn.target_network_update_time}\
-        \n$\epsilon_{{{anneal}}}$ = $\infty$\nburn-in = {dqn.burnin_time}"
+        hyper_param_txt = f"$\\alpha$ = {model_params['lr']}\n$\epsilon_0$ = {model_params['exp_param']}\n$\gamma$ = {model_params['gamma']}\n$\omega_{{{target_string}}}$ = {model_params['target_network_update_time']}\
+        \n$\epsilon_{{{anneal}}}$ = $\infty$\nbuffer size = {model_params['buffer_capacity']}"
     
     axlegend.set_title(f"Hyperparameters", x=0.6)
     axlegend.text(0.0, 0.7, hyper_param_txt, fontsize=12)
     axlegend.set_axis_off()
     
     plt.tight_layout()
-    plt.savefig("test_results.png")
+    plt.savefig(filename)
     plt.show()
-
+    
     if render_final_dqn:
         env = gym.make("CartPole-v1", render_mode="human") 
 
         dqn.dqn_render_run(env=env)
 
-
-if __name__ == "__main__":
-    num_epochs = 300
-    num_repetitions = 5
-    model_params = {
-            'lr': 1e-3,  
-            'exp_param': 0.2,
-            'policy': Policy.EGREEDY,
-            'batch_size': 128,
-            'gamma': 0.99,
-            'target_network_update_time': 100,
-            'do_target_network': True,
-            'do_experience_replay': True,
-            'burnin_time': 10000,   # == buffer_capacity
-            'eval_interval': 10,
-            'n_eval_episodes': 10,
-            'anneal_exp_param': False,
-            'anneal_timescale': num_epochs,
-            'early_stopping_reward': 500,
-    }
-    
-    plot_cartpole_learning(num_epochs=num_epochs, 
-                           num_repetitions=num_repetitions, 
-                            model_params=model_params,
-                            )

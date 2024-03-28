@@ -1,7 +1,7 @@
-from enum import Enum
 import torch
 import numpy as np
 
+from enum import Enum
 
 def act_greedy(q_values: torch.Tensor, exp_param: None = None) -> int:
     _, maxind = torch.max(q_values, dim=1)
@@ -30,7 +30,7 @@ def act_softmax(q_values: torch.Tensor, temperature: float = None) -> int:
     return action
 
 
-def act_random(q_values: torch.Tensor, exp_param: None = None):
+def act_random(q_values: torch.Tensor | None = None, exp_param: None = None):
     return np.random.randint(0, 2)
 
 

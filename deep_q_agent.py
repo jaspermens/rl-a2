@@ -1,11 +1,10 @@
+import torch
 import numpy as np
 import gymnasium as gym 
 
-from policies import Policy
-import torch
-
 from data_handling import ReplayBuffer
 from dqn import DeepQModel
+from policies import Policy
 
 
 class DeepQAgent:
@@ -19,9 +18,10 @@ class DeepQAgent:
 
         self.policy = policy
         self.exploration_parameter = exploration_parameter
-        self.burnin_length = buffer_capacity
+        self.buffer_capacity = buffer_capacity
 
         self.buffer = ReplayBuffer(capacity=buffer_capacity)
+        self.burn_in()
         
     def reset(self):
         self.state, _ = self.env.reset()
@@ -39,17 +39,13 @@ class DeepQAgent:
         return action
 
     @torch.no_grad      # disable gradient calculation here. I think it saves memory
-    def take_step(self, model: DeepQModel):
-        action = self.select_action(model = model)
-
+    def take_step(self, action):
         new_state, reward, done, _, _ = self.env.step(action)
         
         if done:
             new_state = None
-        #
-        # this is where we'd do replay buffer stuff
+
         self.buffer.append(state=self.state, action=action, reward=reward, new_state=new_state, done=done)
-        #
         
         self.state = new_state           
         
@@ -58,13 +54,17 @@ class DeepQAgent:
 
         return reward, done
     
-    def burn_in(self, model: DeepQModel):
-        real_policy = self.policy
-
-        # set the policy to fully random for this bit
-        # the initial model might have a bias
-        self.policy = Policy.RANDOM
-        for _ in range(self.burnin_length):
-            self.take_step(model=model)
+    @torch.no_grad
+    def act_on_model(self, model: DeepQModel):
+        action = self.select_action(model = model)
+        reward, done = self.take_step(action=action)     
+    
+        return reward, done
+    
+    @torch.no_grad    
+    def burn_in(self):
+        # randomly populate the buffer
+        for _ in range(self.buffer_capacity):
+            action = Policy.RANDOM()
+            self.take_step(action)
         
-        self.policy = real_policy

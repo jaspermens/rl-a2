@@ -40,8 +40,9 @@ class DeepQAgent:
 
     @torch.no_grad      # disable gradient calculation here. I think it saves memory
     def take_step(self, action):
-        new_state, reward, done, _, _ = self.env.step(action)
-        
+        new_state, reward, terminated, truncated, _ = self.env.step(action)
+        done = terminated or truncated
+
         if done:
             new_state = None
 

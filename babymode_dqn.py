@@ -30,20 +30,22 @@ class CartPoleDQN:
                  n_eval_episodes: int,              # how many epochs to average the eval reward over
                  anneal_exp_param: bool,            # exploration parameter annealing toggle
                  anneal_timescale: int,             # half-life time for the exploration parameter in epochs
-                 early_stopping_reward: int,        # critical reward value for early stopping
+                #  early_stopping_reward: int,        # critical reward value for early stopping
                  ):
         
         self.gamma = gamma
         self.batch_size = batch_size
         self.eval_interval = eval_interval
         self.n_eval_episodes = n_eval_episodes
-        self.early_stopping_reward = early_stopping_reward
         self.target_network_update_time = target_network_update_time
         self.do_target_network = do_target_network
         self.init_exp_param = exp_param
         self.anneal_exp_param = anneal_exp_param
         self.anneal_timescale = anneal_timescale
         self.env = env
+
+        # self.early_stopping_reward = early_stopping_reward
+        self.early_stopping_reward = env.spec.reward_threshold
 
         # set various counters, lists, etc
         self.reset_counters()
@@ -56,8 +58,8 @@ class CartPoleDQN:
             self.train_step_func = self._train_step_without_buffer
         
         # init the model and agent
-        n_inputs = 4
-        n_actions = 2
+        n_inputs = env.observation_space.shape[0]
+        n_actions = env.action_space.n
         self.model = DeepQModel(n_inputs=n_inputs, n_actions=n_actions)
 
         self.agent = DeepQAgent(env=env, 
@@ -125,7 +127,7 @@ class CartPoleDQN:
         loss = nn.MSELoss()(expected_value, new_state_value)
 
         
-        return loss, done
+        return loss, done, reward
 
     def _train_step_with_buffer(self):
         # take step
@@ -161,7 +163,7 @@ class CartPoleDQN:
 
         loss = nn.MSELoss()(state_action_values, expected_state_action_values.unsqueeze(1))
         
-        return loss, done
+        return loss, done, reward
 
     def train_model(self, num_epochs: int):
         """ Train the model for num_epochs episodes. """
@@ -169,7 +171,7 @@ class CartPoleDQN:
             done = False
             episode_reward = 0
             while not done:
-                loss, done = self.train_step_func()
+                loss, done, reward = self.train_step_func()
 
                 self.optimizer.zero_grad() # remove gradients from previous steps
                 loss.backward()            # compute gradients
@@ -177,7 +179,7 @@ class CartPoleDQN:
                 self.optimizer.step()      # apply gradients
 
                 self.total_time += 1
-                episode_reward += 1
+                episode_reward += reward
 
                 if self.anneal_exp_param:
                     self.update_exp_param(epoch=epoch_i)

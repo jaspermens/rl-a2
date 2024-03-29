@@ -7,7 +7,8 @@ import matplotlib.pyplot as plt
 
 def plot_cartpole_learning(num_repetitions: int, num_epochs: int, 
                            model_params: dict, render_final_dqn=True, 
-                           filename: str = "test_results.png"):
+                           filename: str = "test_results.png",
+                           environment_name: str = "CartPole-v1"):
     """ Plots the (averaged) learning progression for the given parameter combination """
 
     eval_times = np.arange(0, num_epochs, model_params['eval_interval'])
@@ -20,7 +21,7 @@ def plot_cartpole_learning(num_repetitions: int, num_epochs: int,
         return padded
 
     for repetition_i in range(num_repetitions):
-        env = gym.make("CartPole-v1")#, render_mode="human") 
+        env = gym.make(environment_name)
         env.reset(seed=np.random.randint(0,999999999))
 
         dqn = CartPoleDQN(env=env,
@@ -73,7 +74,7 @@ def plot_cartpole_learning(num_repetitions: int, num_epochs: int,
     plt.show()
     
     if render_final_dqn:
-        env = gym.make("CartPole-v1", render_mode="human") 
+        env = gym.make(environment_name, render_mode="human") 
 
         dqn.dqn_render_run(env=env)
 

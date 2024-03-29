@@ -64,7 +64,8 @@ class DeepQAgent:
     @torch.no_grad    
     def burn_in(self):
         # randomly populate the buffer
+        mock_q_values = np.ones(self.env.action_space.n)
         for _ in range(self.buffer_capacity):
-            action = Policy.RANDOM()
+            action = Policy.RANDOM(mock_q_values)
             self.take_step(action)
         

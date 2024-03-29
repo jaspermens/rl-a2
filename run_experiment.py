@@ -62,7 +62,7 @@ if __name__ == "__main__":
             'n_eval_episodes': 10,
             'anneal_exp_param': True,
             'anneal_timescale': anneal_timescale,
-            'early_stopping_reward': 8,
+            'early_stopping_reward': 10,
     }
     plot_cartpole_learning(num_epochs = cmdargs.num_epochs, 
                            num_repetitions = cmdargs.num_repetitions, 

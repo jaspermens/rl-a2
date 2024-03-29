@@ -19,7 +19,8 @@ def plot_cartpole_learning(num_repetitions: int, num_epochs: int,
         npad = len(arr2) - len(arr1)
         padded = np.pad(np.array(arr1), pad_width=(0, npad), mode='constant', constant_values=arr1[-1])
         return padded
-
+    
+    early_stop_epochs = [0]*(num_repetitions)                 # list to keep track of early stopping epochs (used in plotting)
     for repetition_i in range(num_repetitions):
         env = gym.make(environment_name)
         env.reset(seed=np.random.randint(0,999999999))
@@ -27,7 +28,7 @@ def plot_cartpole_learning(num_repetitions: int, num_epochs: int,
         dqn = CartPoleDQN(env=env,
                           **model_params)
         
-        dqn.train_model(num_epochs=num_epochs)    
+        early_stop_epochs[repetition_i] = dqn.train_model(num_epochs=num_epochs)    
 
         eval_rewards[repetition_i] = pad_early_stopped(dqn.eval_rewards, eval_rewards[0]) 
 
@@ -38,11 +39,16 @@ def plot_cartpole_learning(num_repetitions: int, num_epochs: int,
     mean_eval_rewards = np.mean(eval_rewards, axis=0)
     # eval_reward_sigma = np.std(eval_rewards, axis=0)
 
-    ax.plot(eval_times, mean_eval_rewards, c='black', label='mean reward')
+    #ax.plot(eval_times, mean_eval_rewards, c='black', label='mean reward')
     # ax.errorbar(eval_times, mean_eval_rewards, yerr=eval_reward_sigma, c='black', label='mean reward')
     
-    ax.fill_between(eval_times, *np.quantile(eval_rewards, q=[.33, .67], axis=0), interpolate=True, alpha=.5, zorder=0, color='teal',label="1-$\sigma$? quantile")
-    ax.fill_between(eval_times, np.min(eval_rewards, axis=0), np.max(eval_rewards, axis=0), interpolate=True, alpha=.3, zorder=-1, color='teal',label="Total range")
+    #ax.fill_between(eval_times, *np.quantile(eval_rewards, q=[.33, .67], axis=0), interpolate=True, alpha=.5, zorder=0, color='teal',label="1-$\sigma$ quantile")
+    #ax.fill_between(eval_times, np.min(eval_rewards, axis=0), np.max(eval_rewards, axis=0), interpolate=True, alpha=.3, zorder=-1, color='teal',label="Total range")
+    print(early_stop_epochs,eval_rewards.shape)
+    for i,epoch in enumerate(early_stop_epochs):
+        ax.axvline(x=epoch,ls="--",alpha=0.8,color="black") #early stop epochs
+        ax.plot(eval_rewards[i],label=f"Run {i}",alpha=0.8)
+
     ax1 = ax.twinx()
     ax1.plot(epsilons, label="Exploration parameter")
 

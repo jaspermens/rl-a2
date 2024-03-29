@@ -45,6 +45,7 @@ class CartPoleDQN:
         self.anneal_timescale = anneal_timescale
         self.env = env
 
+
         if early_stopping_reward is None:   # if not specified, then take from env
             self.early_stopping_reward = env.spec.reward_threshold
         else:
@@ -192,7 +193,7 @@ class CartPoleDQN:
             if epoch_i % self.eval_interval == 0:
                 stop_early = self.evaluate_model()
                 if stop_early:
-                    break
+                    return epoch_i
 
 
     def evaluate_model(self) -> bool:                

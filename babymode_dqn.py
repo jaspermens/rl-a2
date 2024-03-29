@@ -1,5 +1,6 @@
 import numpy as np
 from tqdm import tqdm
+import os 
 
 import gymnasium as gym
 
@@ -116,7 +117,6 @@ class CartPoleDQN:
         reward, done = self.agent.act_on_model(self.model)
 
         new_state = self.agent.state
-        
 
         # compute mse loss:
         q_values = self.model.forward(state_before) 
@@ -197,7 +197,9 @@ class CartPoleDQN:
 
     def evaluate_model(self) -> bool:                
         """ Evaluation routine. Returns boolean flag for early stopping """
-        mean_reward = self.mean_eval_reward(num_epochs=self.n_eval_episodes)
+        eval_rewards = self.get_eval_rewards(num_epochs=self.n_eval_episodes)
+        mean_reward = np.mean(eval_rewards)
+
         self.eval_rewards.append(mean_reward)
 
         # are we done?
@@ -205,9 +207,12 @@ class CartPoleDQN:
             return False
         
         # we might be done, so triple check:
-        mean_reward = self.mean_eval_reward(num_epochs=3*self.n_eval_episodes)
-        if mean_reward > self.early_stopping_reward:
+        double_check_eval_rewards = self.get_eval_rewards(num_epochs=3*self.n_eval_episodes)
+        double_check_mean = np.mean(double_check_eval_rewards)
+        if double_check_mean > self.early_stopping_reward:
             # we're done!
+            final_eval_rewards = self.get_eval_rewards(num_epochs=6*self.n_eval_episodes)
+            self.save_eval_rewards(np.concatenate([eval_rewards, double_check_eval_rewards, final_eval_rewards]))
             print("stopping early!")
             return True
 
@@ -218,9 +223,15 @@ class CartPoleDQN:
         # print(self.optimizer.param_groups[0]['lr'])
 
         return False       
-
     
-    def mean_eval_reward(self, num_epochs: int) -> float:
+    def save_eval_rewards(self, eval_rewards: np.ndarray) -> np.ndarray:
+        filename = "run_rewards.npy"
+        if os.path.exists(filename):
+            eval_rewards = np.vstack([np.load(filename), eval_rewards])
+
+        np.save(file=filename, arr=eval_rewards)
+
+    def get_eval_rewards(self, num_epochs: int) -> np.ndarray:
         """ Evaluates the model across a few epochs/episodes """  
         rewards = np.zeros((num_epochs))
 
@@ -242,10 +253,9 @@ class CartPoleDQN:
 
             rewards[i] = ep_reward
 
-        mean_reward = np.mean(rewards)
         self.env.reset()
-        
-        return mean_reward
+    
+        return rewards
 
     def dqn_render_run(self, env: gym.Env, n_episodes_to_plot: int = 10) -> None:
         """Runs a single evaluation episode while rendering the environment for visualization."""

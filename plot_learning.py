@@ -70,7 +70,7 @@ def plot_cartpole_learning(num_repetitions: int, num_epochs: int,
     axlegend.set_axis_off()
     
     plt.tight_layout()
-    plt.savefig(filename)
+    plt.savefig(f"figures/{filename}")
     plt.show()
     
     if render_final_dqn:

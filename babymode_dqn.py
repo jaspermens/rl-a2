@@ -99,6 +99,11 @@ class CartPoleDQN:
         self.exp_param = new_exp_param
         self.agent.exploration_parameter = new_exp_param   
 
+    def evaluation_runs(self,num_epochs: int,eval_rewards, double_check) -> None:
+        final_eval_rewards = self.get_eval_rewards(num_epochs=num_epochs)
+        self.save_eval_rewards(np.concatenate([eval_rewards, double_check, final_eval_rewards]))
+        return
+
     def update_target_network(self):
         """ Updates the target network if applicable """
         if not self.do_target_network:
@@ -194,6 +199,9 @@ class CartPoleDQN:
                 stop_early = self.evaluate_model()
                 if stop_early:
                     return epoch_i
+            if epoch_i == (num_epochs-1):
+                self.evaluation_runs(num_epochs = 10*self.n_eval_episodes, eval_rewards = [], double_check = [])
+                return epoch_i
 
 
     def evaluate_model(self) -> bool:                
@@ -212,8 +220,7 @@ class CartPoleDQN:
         double_check_mean = np.mean(double_check_eval_rewards)
         if double_check_mean > self.early_stopping_reward:
             # we're done!
-            final_eval_rewards = self.get_eval_rewards(num_epochs=6*self.n_eval_episodes)
-            self.save_eval_rewards(np.concatenate([eval_rewards, double_check_eval_rewards, final_eval_rewards]))
+            self.evaluation_runs(num_epochs = 6*self.n_eval_episodes,eval_rewards=eval_rewards,double_check=double_check_eval_rewards)
             print("stopping early!")
             return True
 

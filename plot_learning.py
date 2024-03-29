@@ -45,9 +45,10 @@ def plot_cartpole_learning(num_repetitions: int, num_epochs: int,
     #ax.fill_between(eval_times, *np.quantile(eval_rewards, q=[.33, .67], axis=0), interpolate=True, alpha=.5, zorder=0, color='teal',label="1-$\sigma$ quantile")
     #ax.fill_between(eval_times, np.min(eval_rewards, axis=0), np.max(eval_rewards, axis=0), interpolate=True, alpha=.3, zorder=-1, color='teal',label="Total range")
     print(early_stop_epochs,eval_rewards.shape)
+    colors = ["red","orange","green","cyan","purple","brown","gray"]
     for i,epoch in enumerate(early_stop_epochs):
-        ax.axvline(x=epoch,ls="--",alpha=0.8,color="black") #early stop epochs
-        ax.plot(eval_rewards[i],label=f"Run {i}",alpha=0.8)
+        ax.axvline(x=epoch,ls="--",alpha=0.8,color=colors[i]) #early stop epochs
+        ax.plot(np.arange(len(eval_rewards[0]))*10,eval_rewards[i],label=f"Run {i}",alpha=0.8,color=colors[i])
 
     ax1 = ax.twinx()
     ax1.plot(epsilons, label="Exploration parameter")

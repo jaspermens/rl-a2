@@ -17,7 +17,7 @@ def plot_cartpole_learning(num_repetitions: int, num_epochs: int,
     def pad_early_stopped(arr1: list[int], arr2):
         """pads arr1 to match the length of arr2"""
         npad = len(arr2) - len(arr1)
-        padded = np.pad(np.array(arr1), pad_width=(0, npad), mode='constant', constant_values=500)
+        padded = np.pad(np.array(arr1), pad_width=(0, npad), mode='constant', constant_values=arr1[-1])
         return padded
 
     for repetition_i in range(num_repetitions):

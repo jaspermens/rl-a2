@@ -25,8 +25,8 @@ def act_softmax(q_values: torch.Tensor, temperature: float = None) -> int:
         raise ValueError("attempted to use softmax policy without temperature")
     x = q_values.numpy()[0]/temperature
     z = x - max(x)
-    softmax = (np.exp(z))/((sum(np.exp(z))))
-    action = np.random.choice(np.arange(len(softmax)), 1, p=softmax)[0]
+    softmax = torch.softmax(z)
+    action = softmax.multinomial(1)
     return action
 
 

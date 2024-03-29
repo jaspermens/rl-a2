@@ -30,7 +30,7 @@ class CartPoleDQN:
                  n_eval_episodes: int,              # how many epochs to average the eval reward over
                  anneal_exp_param: bool,            # exploration parameter annealing toggle
                  anneal_timescale: int,             # half-life time for the exploration parameter in epochs
-                #  early_stopping_reward: int,        # critical reward value for early stopping
+                 early_stopping_reward: int | None = None, # critical reward value for early stopping
                  ):
         
         self.gamma = gamma
@@ -44,8 +44,10 @@ class CartPoleDQN:
         self.anneal_timescale = anneal_timescale
         self.env = env
 
-        # self.early_stopping_reward = early_stopping_reward
-        self.early_stopping_reward = env.spec.reward_threshold
+        if early_stopping_reward is None:   # if not specified, then take from env
+            self.early_stopping_reward = env.spec.reward_threshold
+        else:
+            self.early_stopping_reward = early_stopping_reward
 
         # set various counters, lists, etc
         self.reset_counters()

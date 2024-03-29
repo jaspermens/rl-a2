@@ -23,10 +23,10 @@ def act_egreedy(q_values: torch.Tensor, epsilon: float = None) -> int:
 def act_softmax(q_values: torch.Tensor, temperature: float = None) -> int:
     if temperature is None:
         raise ValueError("attempted to use softmax policy without temperature")
-    x = q_values.numpy()[0]/temperature
-    z = x - max(x)
-    softmax = torch.softmax(z)
-    action = softmax.multinomial(1)
+    x = torch.divide(q_values, temperature)
+    z = torch.subtract(x, torch.max(x))
+    softmax = torch.softmax(z, dim=1)
+    action = softmax.multinomial(1).item()
     return action
 
 

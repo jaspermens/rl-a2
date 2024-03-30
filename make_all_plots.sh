@@ -3,7 +3,10 @@
 echo "Remaking all plots for RL Assignment 2..."
 
 if [ ! -d "figures" ]; then
-  mkdir figs
+  mkdir figures
+fi
+if [ ! -d "results" ]; then
+  mkdir results
 fi
 
 echo "Running DQN"

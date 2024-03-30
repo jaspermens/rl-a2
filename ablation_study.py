@@ -1,10 +1,12 @@
 import numpy as np 
 import os
+import matplotlib.pyplot as plt
+
+ABLATION_HANDLES = ['classic_dqn', 'ablate_er', 'ablate_tn', 'ablate_both']
 
 def read_ablation_performance():
-    ablation_handles = ['classic_dqn', 'ablate_er', 'ablate_tn', 'ablate_both']
-    final_fns = [f'results/{fn}_final.npy' for fn in ablation_handles]
-    training_fns = [f'results/{fn}_training.npy' for fn in ablation_handles]
+    final_fns = [f'results/{fn}_final.npy' for fn in ABLATION_HANDLES]
+    training_fns = [f'results/{fn}_training.npy' for fn in ABLATION_HANDLES]
     
     if not all([os.path.exists(fn) for fn in final_fns]):
         raise FileNotFoundError
@@ -43,5 +45,36 @@ def print_table():
         print(f"Training time: {mean_tend[experiment]} \pm {spread_tend[experiment]}")
         print()
 
+
+def plot_ablation_results():
+    # eval times are (should be) identical across all four experiments
+    eval_times_fn = f'results/{ABLATION_HANDLES[0]}_eval_times.npy'
+    titles = ['Best model', 'No TN', 'No ER', 'Neither']
+    eval_times = np.load(eval_times_fn)
+    _, training_rewards = read_ablation_performance()
+    
+
+    fig, axes = plt.subplots(2, 2, figsize=[8,6], dpi=150, layout='constrained', sharex=True)
+
+    for i, ax in enumerate(axes.flatten()):
+        eval_rewards = training_rewards[i]
+        ax.plot(eval_times, np.mean(eval_rewards, axis=0), label='Mean reward', color='darkslategray')
+        ax.fill_between(eval_times, np.min(eval_rewards, axis=0), np.max(eval_rewards, axis=0), 
+                        interpolate=True, alpha=.3, zorder=-1, color='teal',label="Total range")
+        
+        ax.set_title(titles[i])
+        ax.set_ylabel('Reward')
+
+    axes[0,0].legend()
+    axes[1,0].set_xlabel('Epoch')
+    axes[1,1].set_xlabel('Epoch')
+    
+    plt.savefig(f'figures/ablation_2by2_training.png',dpi=500)
+    plt.savefig(f'figures/ablation_2by2_training.pdf')
+    plt.close()
+
+
+
 if __name__ == '__main__':
     print_table()
+    plot_ablation_results()

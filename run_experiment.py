@@ -1,6 +1,9 @@
 from policies import Policy
-from plot_learning import plot_cartpole_learning    
+from plot_learning import plot_cartpole_learning, make_learning_plots
 from argparse import ArgumentParser 
+
+
+
 
 
 if __name__ == "__main__":
@@ -14,18 +17,18 @@ if __name__ == "__main__":
                         dest='experience_replay', 
                         action='store_false', 
                         help="""Train without experience replay.""")
-    parser.add_argument("--plot_filename",
-                        dest='plot_filename',
+    parser.add_argument("--filename",
+                        dest='filename',
                         type=str,
-                        default='test_results.png',
+                        default='test_results',
                         help="Filename for the learning progression figure.")
     parser.add_argument("--num_epochs",
                         type=int,
-                        default=500,
+                        default=250,
                         help="Max number of training episodes.")
     parser.add_argument("--num_repetitions",
                         type=int,
-                        default=3,
+                        default=10,
                         help="Number of experiments to average results over.")
     parser.add_argument("--env",
                         type=str,
@@ -36,37 +39,45 @@ if __name__ == "__main__":
     parser.add_argument("--policy",
                         type=str,
                         choices=["egreedy", "softmax"],
-                        default="egreedy",
+                        default="softmax",
                         help="Exploration strategy. Either epsilon-greedy or softmax/boltzmann",
+                        )    
+    parser.add_argument("--show_plot",
+                        dest='show_plot',
+                        action='store_true',
+                        help="Run without showing the plot at the end of training. (only saves)",
                         )
     cmdargs = parser.parse_args()
     
     policy_param_annealtime = {
         "egreedy": (Policy.EGREEDY, 0.9, 100),
-        "softmax": (Policy.SOFTMAX, 100, 50),
+        "softmax": (Policy.SOFTMAX, 0.5, 50),
     }
 
     policy, exp_param, anneal_timescale = policy_param_annealtime[cmdargs.policy] 
 
     model_params = {
-            'lr': 5e-4,  
+            'lr': 0.01,  
             'exp_param': exp_param,
             'policy': policy,
             'batch_size': 256,
-            'gamma': 0.995,
-            'target_network_update_time': 100,
+            'gamma': .995,
+            'target_network_update_time': 50,
             'do_target_network': cmdargs.target_network,
             'do_experience_replay': cmdargs.experience_replay,
             'buffer_capacity': 10000, 
-            'eval_interval': 10,
-            'n_eval_episodes': 10,
-            'anneal_exp_param': True,
+            'eval_interval': 1,
+            'n_eval_episodes': 20,
+            'anneal_exp_param': False,
             'anneal_timescale': anneal_timescale,
-            'early_stopping_reward': 480,
+            'early_stopping_reward': 500,
     }
-    plot_cartpole_learning(num_epochs = cmdargs.num_epochs, 
-                           num_repetitions = cmdargs.num_repetitions, 
-                           model_params = model_params,
-                           filename = cmdargs.plot_filename,
-                           environment_name = cmdargs.env,
-                        )
+    make_learning_plots(
+    # plot_cartpole_learning(
+        num_epochs = cmdargs.num_epochs, 
+        num_repetitions = cmdargs.num_repetitions, 
+        model_params = model_params,
+        filename = cmdargs.filename,
+        environment_name = cmdargs.env,
+        show_plot=cmdargs.show_plot,
+        )

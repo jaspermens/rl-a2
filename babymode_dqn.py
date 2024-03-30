@@ -84,6 +84,7 @@ class CartPoleDQN:
         self.episode_reward = 0 
         self.total_time = 0
         self.eval_rewards = []
+        self.final_eval_rewards = None
 
     def exp_param_at_epoch(self, epoch: int) -> float:
         """ Exploration parameter at the given time (epoch) according to exponential decay function """
@@ -98,11 +99,6 @@ class CartPoleDQN:
         
         self.exp_param = new_exp_param
         self.agent.exploration_parameter = new_exp_param   
-
-    def evaluation_runs(self,num_epochs: int,eval_rewards, double_check) -> None:
-        final_eval_rewards = self.get_eval_rewards(num_epochs=num_epochs)
-        self.save_eval_rewards(np.concatenate([eval_rewards, double_check, final_eval_rewards]))
-        return
 
     def update_target_network(self):
         """ Updates the target network if applicable """
@@ -199,9 +195,10 @@ class CartPoleDQN:
                 stop_early = self.evaluate_model()
                 if stop_early:
                     return epoch_i
-            if epoch_i == (num_epochs-1):
-                self.evaluation_runs(num_epochs = 10*self.n_eval_episodes, eval_rewards = [], double_check = [])
-                return epoch_i
+
+        final_results = self.get_eval_rewards(10*self.n_eval_episodes)
+        self.save_eval_rewards(eval_rewards=final_results)
+        return num_epochs
 
 
     def evaluate_model(self) -> bool:                
@@ -215,29 +212,33 @@ class CartPoleDQN:
         if mean_reward < self.early_stopping_reward:
             return False
         
-        # we might be done, so triple check:
+        # we might be done, so double check:
         double_check_eval_rewards = self.get_eval_rewards(num_epochs=3*self.n_eval_episodes)
         double_check_mean = np.mean(double_check_eval_rewards)
-        if double_check_mean > self.early_stopping_reward:
-            # we're done!
-            self.evaluation_runs(num_epochs = 6*self.n_eval_episodes,eval_rewards=eval_rewards,double_check=double_check_eval_rewards)
-            print("stopping early!")
-            return True
+        if double_check_mean < self.early_stopping_reward: 
+            # not quite there, but we're probably close...
+            
+            # decrease learning rate so we don't overshoot?
+            # self.optimizer.param_groups[0]['lr'] /= 2
 
-        # not quite there, but we're probably close...
-        print("almost stopped early...")
-        # print(self.optimizer.param_groups[0]['lr'])
-        # self.optimizer.param_groups[0]['lr'] /= 2
-        # print(self.optimizer.param_groups[0]['lr'])
+            print("almost stopped early...")
+            return False       
 
-        return False       
+        # passed both tests, so we're done!
+        final_rewards = self.get_eval_rewards(num_epochs=6*self.n_eval_episodes)
+        all_final_rewards = np.concatenate([eval_rewards, double_check_eval_rewards, final_rewards])
+        self.save_eval_rewards(eval_rewards=all_final_rewards)
+        
+        print("stopping early!")
+        return True
     
     def save_eval_rewards(self, eval_rewards: np.ndarray) -> np.ndarray:
-        filename = "run_rewards.npy"
-        if os.path.exists(filename):
-            eval_rewards = np.vstack([np.load(filename), eval_rewards])
+        # filename = "run_rewards.npy"
+        # if os.path.exists(filename):
+            # eval_rewards = np.vstack([np.load(filename), eval_rewards])
 
-        np.save(file=filename, arr=eval_rewards)
+        self.final_eval_rewards = eval_rewards
+        # np.save(file=filename, arr=eval_rewards)
 
     def get_eval_rewards(self, num_epochs: int) -> np.ndarray:
         """ Evaluates the model across a few epochs/episodes """  

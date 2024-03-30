@@ -10,7 +10,7 @@ echo "Running DQN"
 python3 run_experiment.py --filename='classic_dqn'
 
 echo "Ablating ER"
-python3 run_experiment.py --no_target_network --filename='ablate_er'
+python3 run_experiment.py --no_experience_replay --filename='ablate_er'
 
 echo "Ablating TN"
 python3 run_experiment.py --no_target_network --filename='ablate_tn'

@@ -46,15 +46,15 @@ def print_table():
         print()
 
 
-def plot_ablation_results():
+def plot_ablation_training():
     # eval times are (should be) identical across all four experiments
     eval_times_fn = f'results/{ABLATION_HANDLES[0]}_eval_times.npy'
-    titles = ['Best model', 'No TN', 'No ER', 'Neither']
+    titles = ['Best model', 'No ER', 'No TN', 'Neither']
     eval_times = np.load(eval_times_fn)
     _, training_rewards = read_ablation_performance()
     
 
-    fig, axes = plt.subplots(2, 2, figsize=[8,6], dpi=150, layout='constrained', sharex=True)
+    fig, axes = plt.subplots(2, 2, figsize=[12,6], dpi=150, layout='constrained', sharex=True)
 
     for i, ax in enumerate(axes.flatten()):
         eval_rewards = training_rewards[i]
@@ -73,8 +73,27 @@ def plot_ablation_results():
     plt.savefig(f'figures/ablation_2by2_training.pdf')
     plt.close()
 
+def plot_ablation_results():
+    # eval times are (should be) identical across all four experiments
+    titles = ['Best model', 'No ER', 'No TN', 'Neither']
+    test_rewards, _ = read_ablation_performance()
+    
 
+    fig, axes = plt.subplots(2, 2, figsize=[12,6], dpi=150, layout='constrained', sharex=True)
+
+    for i, (test_scores, ax) in enumerate(zip(test_rewards, axes.flatten())):
+        ax.hist(test_scores.ravel(), color='teal', bins=np.arange(0, 550, 25))
+        ax.set_title(titles[i])
+        ax.set_ylabel('Probability')
+
+    axes[1,0].set_xlabel('Reward')
+    axes[1,1].set_xlabel('Reward')
+    
+    plt.savefig(f'figures/ablation_2by2_test_rewards.png',dpi=500)
+    plt.savefig(f'figures/ablation_2by2_test_rewards.pdf')
+    plt.close()
 
 if __name__ == '__main__':
     print_table()
     plot_ablation_results()
+    plot_ablation_training()

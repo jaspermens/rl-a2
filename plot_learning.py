@@ -118,12 +118,26 @@ def plot_cartpole_learning(num_repetitions: int, num_epochs: int,
     fig, (ax, axlegend) = plt.subplots(1, 2, figsize=(14, 7), width_ratios=[9,1])
 
     mean_eval_rewards = np.mean(eval_rewards, axis=0)
+    # eval_reward_sigma = np.std(eval_rewards, axis=0)
+
     ax.plot(eval_times, mean_eval_rewards, c='black', label='mean reward')
-    ax.fill_between(eval_times, np.min(eval_rewards, axis=0), np.max(eval_rewards, axis=0), interpolate=True, alpha=.3, zorder=-1, color='teal',label="Total range")
-    
-    colors = ["red", "orange", "green", "cyan", "purple", "brown", "gray", "mediumorchid", "firebrick", "goldenrod"]
-    for i, (color, rewardcurve) in enumerate(zip(colors, eval_rewards)):
-        ax.plot(eval_times, rewardcurve, label=f"Run {i}", alpha=0.8, color=color)
+    # ax.errorbar(eval_times, mean_eval_rewards, yerr=eval_reward_sigma, c='black', label='mean reward')
+    #np.save(file=f"Exploration_testing/mean_reward_{str(model_params['policy'])[14:-23]}{model_params['exp_param']}",arr=mean_eval_rewards)
+    #ax.fill_between(eval_times, *np.quantile(eval_rewards, q=[.33, .67], axis=0), interpolate=True, alpha=.5, zorder=0, color='teal',label="1-$\sigma$ quantile")
+    #ax.fill_between(eval_times, np.min(eval_rewards, axis=0), np.max(eval_rewards, axis=0), interpolate=True, alpha=.3, zorder=-1, color='teal',label="Total range")
+    print(early_stop_epochs,eval_rewards.shape)
+    colors = ["red","orange","green","cyan","purple","brown","gray"]
+    for i,epoch in enumerate(early_stop_epochs):
+         #early stop epochs
+        if len(early_stop_epochs) <= len(colors):
+            ax.plot(eval_times,eval_rewards[i],label=f"Run {i}",alpha=0.8,color=colors[i])
+            ax.axvline(x=epoch,ls="--",alpha=0.8,color=colors[i])
+        else:
+            ax.plot(eval_times,eval_rewards[i],label=f"Run {i}",alpha=0.8)
+            ax.axvline(x=epoch,ls="--",alpha=0.8)
+    #np.save(file=f"Exploration_testing/training_rewards_{str(model_params['policy'])[14:-23]}{model_params['exp_param']}",arr=eval_rewards)
+    ax1 = ax.twinx()
+    ax1.plot(epsilons, label="Exploration parameter")
 
     # aesthetics
     ax.set_title(f"Results of {str(model_params['policy'])[14:-23]} policy for {num_repetitions} repetitions of {num_epochs} epochs", fontsize=20)

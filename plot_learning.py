@@ -72,7 +72,7 @@ def plot_learning_progression(eval_times, eval_rewards, filename: str, show_plot
     ax.set_ylabel('Reward')
     ax.legend()
     
-    plt.savefig(f'figures/{filename}_training.png')
+    plt.savefig(f'figures/{filename}_training.png',dpi=500)
     plt.savefig(f'figures/{filename}_training.pdf')
     if show_plot:
         plt.show()
@@ -161,7 +161,7 @@ def plot_cartpole_learning(num_repetitions: int, num_epochs: int,
     axlegend.set_axis_off()
     
     plt.tight_layout()
-    plt.savefig(f"figures/{filename}.png")
+    plt.savefig(f"figures/{filename}.png",dpi=500)
     plt.savefig(f"figures/{filename}.pdf")
     plt.show()
     plt.close()

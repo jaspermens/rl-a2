@@ -21,6 +21,12 @@ python3 run_experiment.py --no_target_network --filename='ablate_tn'
 echo "Ablating both"
 python3 run_experiment.py --no_experience_replay --no_target_network --filename='ablate_both'
 
+echo "Performing best exploration comparisons"
+python3 run_experiment.py --filename='best_egreedy' --policy='egreedy'
+
+echo "Making exploration comparison plot"
+python3 best_explos.py
+
 echo "Compiling results"
 python3 ablation_study.py
 

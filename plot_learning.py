@@ -70,6 +70,7 @@ def plot_learning_progression(eval_times, eval_rewards, filename: str, show_plot
     
     ax.set_xlabel('Epoch')
     ax.set_ylabel('Reward')
+    ax.grid(alpha=0.5)
     ax.legend()
     
     plt.savefig(f'figures/{filename}_training.png',dpi=500)
@@ -165,5 +166,3 @@ def plot_cartpole_learning(num_repetitions: int, num_epochs: int,
     plt.savefig(f"figures/{filename}.pdf")
     plt.show()
     plt.close()
-    
-

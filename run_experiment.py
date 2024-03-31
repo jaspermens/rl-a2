@@ -50,7 +50,7 @@ if __name__ == "__main__":
     cmdargs = parser.parse_args()
     
     policy_param_annealtime = {
-        "egreedy": (Policy.EGREEDY, 0.9, 100),
+        "egreedy": (Policy.EGREEDY, 0.1, 100),
         "softmax": (Policy.SOFTMAX, 0.5, 50),
     }
 

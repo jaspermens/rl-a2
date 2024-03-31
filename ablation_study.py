@@ -49,7 +49,7 @@ def print_table():
 def plot_ablation_training():
     # eval times are (should be) identical across all four experiments
     eval_times_fn = f'results/{ABLATION_HANDLES[0]}_eval_times.npy'
-    titles = ['Best model', 'No ER', 'No TN', 'Neither']
+    titles = ['Model with TN & ER', 'Model excluding ER', 'Model excluding TN', 'Model excluding both TN & ER']
     eval_times = np.load(eval_times_fn)
     _, training_rewards = read_ablation_performance()
     
@@ -62,13 +62,14 @@ def plot_ablation_training():
         ax.fill_between(eval_times, np.min(eval_rewards, axis=0), np.max(eval_rewards, axis=0), 
                         interpolate=True, alpha=.3, zorder=-1, color='teal',label="Total range")
         
+        ax.grid(alpha=0.5)
         ax.set_title(titles[i])
         ax.set_ylabel('Reward')
 
     axes[0,0].legend()
     axes[1,0].set_xlabel('Epoch')
     axes[1,1].set_xlabel('Epoch')
-    
+    axes[1,1].set_ylim(8,12)
     plt.savefig(f'figures/ablation_2by2_training.png',dpi=500)
     plt.savefig(f'figures/ablation_2by2_training.pdf')
     plt.close()

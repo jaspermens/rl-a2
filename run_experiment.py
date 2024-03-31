@@ -24,11 +24,11 @@ if __name__ == "__main__":
                         help="Filename for the learning progression figure.")
     parser.add_argument("--num_epochs",
                         type=int,
-                        default=250,
+                        default=500,
                         help="Max number of training episodes.")
     parser.add_argument("--num_repetitions",
                         type=int,
-                        default=10,
+                        default=20,
                         help="Number of experiments to average results over.")
     parser.add_argument("--env",
                         type=str,

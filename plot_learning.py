@@ -87,7 +87,10 @@ def make_learning_plots(num_repetitions: int, num_epochs: int,
                            filename: str = "test_results.png",
                            environment_name: str = "CartPole-v1",
                            ):
+    
     eval_times = np.arange(0, num_epochs, model_params['eval_interval'])
+    eval_times_fn = f'results/{filename}_eval_times.npy'
+    np.save(eval_times_fn, arr=eval_times)
 
     eval_rewards, final_rewards = get_eval_rewards(num_repetitions=num_repetitions, 
                                     num_epochs=num_epochs, 

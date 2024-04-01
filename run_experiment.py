@@ -1,8 +1,6 @@
 from policies import Policy
-from plot_learning import plot_cartpole_learning, make_learning_plots
+from plot_learning import make_learning_plots
 from argparse import ArgumentParser 
-
-
 
 
 
@@ -59,7 +57,7 @@ if __name__ == "__main__":
     model_params = {
             'lr': 0.01,  
             'exp_param': exp_param,
-            'policy': policy,
+            'policy': policy, 
             'batch_size': 256,
             'gamma': .995,
             'target_network_update_time': 50,
@@ -70,10 +68,9 @@ if __name__ == "__main__":
             'n_eval_episodes': 20,
             'anneal_exp_param': False,
             'anneal_timescale': anneal_timescale,
-            'early_stopping_reward': 500,
+            'early_stopping_reward': 500 if cmdargs.env=="CartPole-v1" else None,
     }
     make_learning_plots(
-    # plot_cartpole_learning(
         num_epochs = cmdargs.num_epochs, 
         num_repetitions = cmdargs.num_repetitions, 
         model_params = model_params,

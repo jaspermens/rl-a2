@@ -9,16 +9,16 @@ if [ ! -d "results" ]; then
   mkdir results
 fi
 
-echo "Running DQN"
+echo "Training DQN"
 python3 run_experiment.py --filename='classic_dqn'
 
-echo "Ablating ER"
+echo "Training DQN-ER"
 python3 run_experiment.py --no_experience_replay --filename='ablate_er'
 
-echo "Ablating TN"
+echo "Training DQN-TN"
 python3 run_experiment.py --no_target_network --filename='ablate_tn'
 
-echo "Ablating both"
+echo "Training DQN-ER-TN"
 python3 run_experiment.py --no_experience_replay --no_target_network --filename='ablate_both'
 
 echo "Performing best exploration comparisons"
@@ -29,5 +29,8 @@ python3 best_explos.py
 
 echo "Compiling results"
 python3 ablation_study.py
+
+echo "Training on LunarLander-v2"
+python3 run_experiment.py --env="LunarLander-v2" --num_repetitions=5 --filename="lunarlander"
 
 echo "DONE!"
